@@ -3,7 +3,7 @@
   "name": "cordova-lib",
   "license": "Apache-2.0",
   "description": "Apache Cordova tools core lib and API",
-  "version": "7.0.2-dev",
+  "version": "7.0.2-cb-12397-devtest1",
   "repository": {
     "type": "git",
     "url": "git://git-wip-us.apache.org/repos/asf/cordova-lib.git"
@@ -19,7 +19,7 @@
   "dependencies": {
     "aliasify": "^2.1.0",
     "cordova-common": "2.0.3",
-    "cordova-create": "~1.1.0",
+    "cordova-create": "git+https://github.com/brodybits/cordova-create.git#cb-12397-devtest1",
     "cordova-fetch": "1.1.0",
     "cordova-js": "4.2.1",
     "cordova-serve": "^1.0.0",
@@ -57,7 +57,7 @@
     "jasmine": "jasmine JASMINE_CONFIG_PATH=spec-cordova/jasmine.json",
     "jasmine-ios": "jasmine spec-cordova/platform.spec.ios.js",
     "cover": "istanbul cover --root src --print detail jasmine JASMINE_CONFIG_PATH=spec-cordova/jasmine.json",
-    "e2e-tests" : "jasmine JASMINE_CONFIG_PATH=integration-tests/jasmine.json"
+    "e2e-tests": "jasmine JASMINE_CONFIG_PATH=integration-tests/jasmine.json"
   },
   "contributors": [
     {
