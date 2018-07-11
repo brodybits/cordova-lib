@@ -14,256 +14,263 @@
     specific language governing permissions and limitations
     under the License.
 */
+
+const path = require('path');
+const fs = require('fs-extra');
+const prepare = require('../src/cordova/prepare');
+const cordovaPlugin = require('../src/cordova/plugin');
+const cordovaPlatform = require('../src/cordova/platform');
+const { ConfigParser } = require('cordova-common');
+const { listPlatforms, requireNoCache } = require('../src/cordova/util');
+const { tmpDir: getTmpDir, testPlatform, setDefaultTimeout } = require('../spec/helpers');
+
+// XXX
 var helpers = require('../spec/helpers');
-var path = require('path');
 var shell = require('shelljs');
 var events = require('cordova-common').events;
-var ConfigParser = require('cordova-common').ConfigParser;
-var cordovaPlatform = require('../src/cordova/platform');
-var prepare = require('../src/cordova/prepare');
 var cordova_util = require('../src/cordova/util');
-var cordovaPlugin = require('../src/cordova/plugin');
-// cordova = require('../src/cordova/cordova'),
 var TIMEOUT = 240 * 1000;
 
 /** Testing will check if "cordova prepare" is restoring platforms and plugins as expected.
 *   Uses different basePkgJson files depending on testing expecations of what (platforms/plugins/variables)
 *   should initially be in pkg.json and/or config.xml.
 */
+describe('restore', function () {
+    setDefaultTimeout(240 * 1000);
 
-// Use basePkgJson
-describe('tests platform/spec restore with --save', function () {
-    var tmpDir = helpers.tmpDir('platform_test_pkgjson2');
-    var project = path.join(tmpDir, 'project');
-    var results;
-    var listener = function (res) { results = res; };
+    const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
+    var tmpDir, project, pkgJsonPath, configXmlPath;
 
-    beforeEach(function () {
-        jasmine.DEFAULT_TIMEOUT_INTERVAL = 300 * 1000;
-        shell.rm('-rf', project);
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson'), tmpDir);
-        shell.mv(path.join(tmpDir, 'basePkgJson'), project);
-        process.chdir(project);
+    beforeEach(() => {
+        tmpDir = getTmpDir('pkgJson');
+        project = path.join(tmpDir, 'project');
+        pkgJsonPath = path.join(project, 'package.json');
+        configXmlPath = path.join(project, 'config.xml');
         delete process.env.PWD;
-        events.on('results', listener);
     });
 
-    afterEach(function () {
-        events.removeListener('results', listener);
-        cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
+    afterEach(() => {
+        process.chdir(__dirname); // Needed to rm the dir on Windows.
+        fs.removeSync(tmpDir);
     });
 
-    // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        return cordovaPlatform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-        });
+    function setupProject (name) {
+        fs.copySync(path.join(fixturesPath, name), project);
+        process.chdir(project);
     }
-    /** Test#000 will check that when a platform is added with a spec, it will
-    *   add to pkg.json with a '^' and to config.xml with a '~'. When prepare is run,
-    *   pkg.json will have no change and config.xml (first char) will change from a '~' to a '^'.
-    */
-    it('Test#000 : tests that the spec (~,^) is added and updated as expected in config.xml', function () {
-        var cwd = process.cwd();
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        cordova_util.requireNoCache(pkgJsonPath);
-        var pkgJson;
-        var androidPlatform = 'android';
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var firstCharConfig;
-        var engines;
-        var engNames;
-        var engSpec;
 
-        return emptyPlatformList().then(function () {
-            // Add platform with save, fetch
-            return cordovaPlatform('add', androidPlatform, {'save': true});
-        }).then(function () {
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            // Added platform properly to pkg.json
-            expect(pkgJson.cordova.platforms).toBeDefined();
-            expect(pkgJson.cordova.platforms.indexOf(androidPlatform)).toBeGreaterThan(-1);
-            // When spec is added to pkg.json, first char is '^'.
-            expect(pkgJson.dependencies['cordova-' + androidPlatform].charAt(0)).toEqual('^');
+    function getCfg () {
+        expect(configXmlPath).toExist();
+        return new ConfigParser(configXmlPath);
+    }
 
-            var cfg = new ConfigParser(configXmlPath);
-            engines = cfg.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
+    function getCfgEngineNames (cfg = getCfg()) {
+        return cfg.getEngines().map(({ name }) => name);
+    }
+
+    function getPkgJson (propPath) {
+        expect(pkgJsonPath).toExist();
+        const keys = propPath ? propPath.split('.') : [];
+        return keys.reduce((obj, key) => {
+            expect(obj).toBeDefined();
+            return obj[key];
+        }, requireNoCache(pkgJsonPath));
+    }
+
+    function platformPkgName (platformName) {
+        return platformName.replace(/^(?:cordova-)?/, 'cordova-');
+    }
+
+    function pluginPath (pluginName) {
+        return path.join(project, 'plugins', pluginName);
+    }
+
+    function installedPlatforms () {
+        // Sort platform list to allow for easy pseudo set equality
+        return listPlatforms(project).sort();
+    }
+
+    function expectPluginsInPkgJson (plugins) {
+        const pkgJson = getPkgJson();
+        expect(pkgJson).toBeDefined();
+
+        // Check that cordova.plugins key in package.json contains the expected
+        // variables and ONLY them
+        const variables = plugins.reduce((o, {name, variables}) => {
+            o[name] = variables;
+            return o;
+        }, {});
+        expect(pkgJson.cordova).toBeDefined();
+        expect(pkgJson.cordova.plugins).toEqual(variables);
+
+        // Check that dependencies key in package.json contains the expected specs
+        // We only check the specs for plugins where an expected spec was given
+        const specs = plugins.reduce((o, {name, spec}) => {
+            if (spec) o[name] = spec;
+            return o;
+        }, {});
+        if (Object.keys(specs).length > 0) {
+            expect(pkgJson.dependencies).toEqual(jasmine.objectContaining(specs));
+        }
+    }
+
+    function expectConsistentPlugins (plugins) {
+        expect(getCfg().getPlugins()).toEqual(plugins);
+
+        const unwrappedPlugins = plugins.map(p => p.sample || p);
+        expectPluginsInPkgJson(unwrappedPlugins);
+
+        const pluginNames = unwrappedPlugins.map(({ name }) => name);
+        pluginNames.forEach(name => expect(pluginPath(name)).toExist());
+    }
+
+    // Use basePkgJson
+    describe('with --save', function () {
+        beforeEach(() => setupProject('basePkgJson'));
+
+        /** Test#000 will check that when a platform is added with a spec, it will
+        *   add to pkg.json with a '^' and to config.xml with a '~'. When prepare is run,
+        *   pkg.json will have no change and config.xml (first char) will change from a '~' to a '^'.
+        */
+        it('Test#000 : tests that the spec (~,^) is added and updated as expected in config.xml', function () {
+            const PLATFORM = 'android';
+
+            expect(installedPlatforms()).toEqual([]);
+
+            return cordovaPlatform('add', PLATFORM, {save: true}).then(function () {
+                // When spec is added to pkg.json, first char is '^'.
+                const pkgJson = getPkgJson();
+                expect(pkgJson.cordova.platforms).toEqual([PLATFORM]);
+                expect(pkgJson.dependencies[platformPkgName(PLATFORM)]).toMatch(/^\^/);
+
+                // When spec is added to config.xml, first char is '~'.
+                expect(getCfg().getEngines()).toEqual([jasmine.objectContaining({
+                    name: PLATFORM,
+                    spec: jasmine.stringMatching(/^~/)
+                })]);
+            }).then(function () {
+                return prepare();
+            }).then(function () {
+                // No changes to pkg.json spec for android.
+                const pkgJson = getPkgJson();
+                expect(pkgJson.cordova.platforms).toEqual([PLATFORM]);
+                expect(pkgJson.dependencies[platformPkgName(PLATFORM)]).toMatch(/^\^/);
+
+                // config.xml spec should change from '~' to '^'.
+                expect(getCfg().getEngines()).toEqual([jasmine.objectContaining({
+                    name: PLATFORM,
+                    spec: jasmine.stringMatching(/^\^/)
+                })]);
             });
-            engSpec = engines.map(function (elem) {
-                return elem.spec;
+        }, 300000);
+
+        /** Test#017
+        *   When platform is added with url and fetch and restored with fetch,
+        *   pkg.json and config.xml would add it to their files properly.
+        *   When prepare is run with fetch, platform should be installed.
+        */
+        it('Test#017 : test to make sure that platform url is added and restored properly', function () {
+            const PLATFORM = 'browser';
+            const PLATFORM_URL = 'https://github.com/apache/cordova-browser';
+
+            expect(installedPlatforms()).toEqual([]);
+
+            return Promise.resolve().then(function () {
+                // Add platform with save and fetch
+                return cordovaPlatform('add', PLATFORM_URL, {save: true});
+            }).then(function () {
+                // Check that platform was added to config.xml successfully.
+                expect(getCfg().getEngines()).toEqual([jasmine.objectContaining({
+                    name: PLATFORM,
+                    spec: PLATFORM_URL
+                })]);
+
+                // Check that platform was added to pkg.json successfully.
+                const pkgJson = getPkgJson();
+                expect(pkgJson.cordova.platforms).toEqual([PLATFORM]);
+                expect(pkgJson.dependencies[platformPkgName(PLATFORM)]).toEqual(`git+${PLATFORM_URL}.git`);
+            }).then(function () {
+                // Remove platform without --save.
+                return cordovaPlatform('rm', PLATFORM);
+            }).then(function () {
+                // Platform in pkg.json should still be there.
+                const pkgJson = getPkgJson();
+                expect(pkgJson.cordova.platforms).toEqual([PLATFORM]);
+                expect(pkgJson.dependencies[platformPkgName(PLATFORM)]).toEqual(`git+${PLATFORM_URL}.git`);
+            }).then(function () {
+                return prepare();
+            }).then(function () {
+                // Check config.xml for spec modification.
+                expect(getCfg().getEngines()).toEqual([jasmine.objectContaining({
+                    name: PLATFORM,
+                    spec: `git+${PLATFORM_URL}.git`
+                })]);
+                // No change to pkg.json.
+                const pkgJson = getPkgJson();
+                expect(pkgJson.cordova.platforms).toEqual([PLATFORM]);
+                expect(pkgJson.dependencies[platformPkgName(PLATFORM)]).toEqual(`git+${PLATFORM_URL}.git`);
             });
-            // Only android platform added to config.xml
-            expect(engNames).toEqual([ androidPlatform ]);
-            expect(engines.length === 1);
-            // When spec is added to config.xml, first char is '~'.
-            firstCharConfig = engSpec[0].charAt(0);
-            expect(firstCharConfig === '~');
-        }).then(function () {
-            // Run cordova prepare
-            return prepare();
-        }).then(function () {
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            // No changes to pkg.json spec for android.
-            expect(pkgJson.dependencies['cordova-' + androidPlatform].charAt(0)).toEqual('^');
-            expect(pkgJson.cordova.platforms.indexOf(androidPlatform)).toBeGreaterThan(-1);
-            // Config.xml spec (first char) should change from '~' to '^'.
-            var cfg1 = new ConfigParser(configXmlPath);
-            engines = cfg1.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            engSpec = engines.map(function (elem) {
-                return elem.spec;
-            });
-            firstCharConfig = engSpec[0].charAt(0);
-            // When spec is added to config.xml, first char is '~'.
-            expect(firstCharConfig === '^');
-            expect(engNames).toEqual([ androidPlatform ]);
-            expect(engines.length === 1);
         });
-    // Cordova prepare needs extra wait time to complete.
-    }, 300000);
 
-    /** Test#017
-    *   When platform is added with url and fetch and restored with fetch,
-    *   pkg.json and config.xml would add it to their files properly.
-    *   When prepare is run with fetch, platform should be installed.
-    */
-    it('Test#017 : test to make sure that platform url is added and restored properly', function () {
-        var cwd = process.cwd();
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        var pkgJson;
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var bPlatform = 'browser';
-        var engines;
-        var engNames;
-        var engSpec;
+        /** Test#018
+        *   When plugin is added with url and fetch and restored with fetch,
+        *   pkg.json and config.xml would add it to their files properly.
+        *   When prepare is run with fetch, plugin should be installed.
+        */
+        it('Test#018 : test to make sure that plugin url is added and restored properly', function () {
+            const PLUGIN_ID = 'cordova-plugin-splashscreen';
+            const PLUGIN_URL = 'https://github.com/apache/cordova-plugin-splashscreen';
 
-        return emptyPlatformList().then(function () {
-            // Add platform with save and fetch
-            return cordovaPlatform('add', 'https://github.com/apache/cordova-browser', {'save': true});
-        }).then(function () {
-            // Check that platform was added to config.xml successfully.
-            var cfg = new ConfigParser(configXmlPath);
-            engines = cfg.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
+            expect(installedPlatforms()).toEqual([]);
+
+            return Promise.resolve().then(function () {
+                // Add plugin with save and fetch.
+                return cordovaPlugin('add', PLUGIN_URL, {save: true});
+            }).then(function () {
+                // Plugin was installed and added to config.xml and pkg.json
+                expect(getCfg().getPlugins()).toEqual([{
+                    name: PLUGIN_ID,
+                    spec: PLUGIN_URL,
+                    variables: jasmine.any(Object)
+                }]);
+                expectPluginsInPkgJson([{
+                    name: PLUGIN_ID,
+                    spec: `git+${PLUGIN_URL}.git`,
+                    variables: jasmine.any(Object)
+                }]);
+                expect(pluginPath(PLUGIN_ID)).toExist();
+            }).then(function () {
+                // Remove plugin without --save.
+                return cordovaPlugin('rm', PLUGIN_ID);
+            }).then(function () {
+                // config.xml and pkg.json remain unchanged
+                expect(getCfg().getPlugins()).toEqual([{
+                    name: PLUGIN_ID,
+                    spec: PLUGIN_URL,
+                    variables: jasmine.any(Object)
+                }]);
+                expectPluginsInPkgJson([{
+                    name: PLUGIN_ID,
+                    spec: `git+${PLUGIN_URL}.git`,
+                    variables: jasmine.any(Object)
+                }]);
+                // Plugin was removed from the installed plugin list successfully.
+                expect(pluginPath(PLUGIN_ID)).not.toExist();
+            }).then(function () {
+                // Add platform (so that prepare can run).
+                return cordovaPlatform('add', 'browser', {save: true});
+            }).then(function () {
+                return prepare({save: true});
+            }).then(function () {
+                // Config.xml spec now matches the one in pkg.json.
+                expectConsistentPlugins([{
+                    name: PLUGIN_ID,
+                    spec: `git+${PLUGIN_URL}.git`,
+                    variables: jasmine.any(Object)
+                }]);
             });
-            engSpec = engines.map(function (elem) {
-                return elem.spec;
-            });
-            expect(engNames).toEqual([bPlatform]);
-            expect(engSpec).toEqual([ 'https://github.com/apache/cordova-browser' ]);
-            // Check that platform was added to pkg.json successfully.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.cordova.platforms.indexOf('browser')).toBeDefined();
-            expect(pkgJson.dependencies['cordova-browser']).toEqual('git+https://github.com/apache/cordova-browser.git');
-        }).then(function () {
-            // Remove platform without --save.
-            return cordovaPlatform('rm', bPlatform);
-        }).then(function () {
-            // Platform in pkg.json should still be there.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.cordova.platforms.indexOf('browser')).toBeDefined();
-            expect(pkgJson.dependencies['cordova-browser']).toEqual('git+https://github.com/apache/cordova-browser.git');
-        }).then(function () {
-            // Run cordova prepare
-            return prepare();
-        }).then(function () {
-            // Check config.xml for spec modification.
-            var cfg3 = new ConfigParser(configXmlPath);
-            engines = cfg3.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            engSpec = engines.map(function (elem) {
-                return elem.spec;
-            });
-            expect(engNames).toEqual([ 'browser' ]);
-            expect(engSpec).toEqual([ 'git+https://github.com/apache/cordova-browser.git' ]);
-            // No change to pkg.json.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.cordova.platforms.indexOf('browser')).toBeDefined();
-            expect(pkgJson.dependencies['cordova-browser']).toEqual('git+https://github.com/apache/cordova-browser.git');
         });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
-
-    /** Test#018
-    *   When plugin is added with url and fetch and restored with fetch,
-    *   pkg.json and config.xml would add it to their files properly.
-    *   When prepare is run with fetch, plugin should be installed.
-    */
-    it('Test#018 : test to make sure that plugin url is added and restored properly', function () {
-        var cwd = process.cwd();
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        var pkgJson;
-        var pluginsFolderPath = path.join(cwd, 'plugins');
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var configPlugins;
-        var configPlugin;
-        return emptyPlatformList().then(function () {
-            // Add plugin with save and fetch.
-            return cordovaPlugin('add', ['https://github.com/apache/cordova-plugin-splashscreen'], {'save': true});
-        }).then(function () {
-            // Plugin id and spec were added to config.xml successfully.
-            var cfg = new ConfigParser(configXmlPath);
-            configPlugins = cfg.getPluginIdList();
-            configPlugin = cfg.getPlugin(configPlugins);
-            expect(configPlugin.spec).toEqual('https://github.com/apache/cordova-plugin-splashscreen');
-            expect(configPlugin.name).toEqual('cordova-plugin-splashscreen');
-            // Plugin was added to pkg.json successfully in plugin list and dependencies.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.dependencies).toEqual({ 'cordova-plugin-splashscreen': 'git+https://github.com/apache/cordova-plugin-splashscreen.git' });
-            expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toBeDefined();
-            // Plugin was added to installed plugin list successfully.
-            expect(path.join(pluginsFolderPath, 'cordova-plugin-splashscreen')).toExist();
-        }).then(function () {
-            // Remove plugin without --save.
-            return cordovaPlugin('rm', 'cordova-plugin-splashscreen');
-        }).then(function () {
-            // Plugin id and spec are still in config.xml.
-            var cfg2 = new ConfigParser(configXmlPath);
-            configPlugins = cfg2.getPluginIdList();
-            configPlugin = cfg2.getPlugin(configPlugins);
-            expect(configPlugin.spec).toEqual('https://github.com/apache/cordova-plugin-splashscreen');
-            expect(configPlugin.name).toEqual('cordova-plugin-splashscreen');
-            // Plugin still in pkg.json plugin list and dependencies.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.dependencies).toEqual({ 'cordova-plugin-splashscreen': 'git+https://github.com/apache/cordova-plugin-splashscreen.git' });
-            expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toBeDefined();
-            // Plugin was removed from the installed plugin list successfully.
-            expect(path.join(pluginsFolderPath, 'cordova-plugin-splashscreen')).not.toExist();
-        }).then(function () {
-            // Add platform (so that prepare can run).
-            return cordovaPlatform('add', 'browser', {'save': true});
-        }).then(function () {
-            // Run cordova prepare with fetch.
-            return prepare({'save': true});
-        }).then(function () {
-            // Config.xml spec is modified.
-            var cfg3 = new ConfigParser(configXmlPath);
-            configPlugins = cfg3.getPluginIdList();
-            configPlugin = cfg3.getPlugin(configPlugins);
-            expect(configPlugin.spec).toEqual('git+https://github.com/apache/cordova-plugin-splashscreen.git');
-            expect(configPlugin.name).toEqual('cordova-plugin-splashscreen');
-            // Pkg.json splashscreen dependency has no changes.
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            expect(pkgJson.dependencies['cordova-plugin-splashscreen']).toEqual('git+https://github.com/apache/cordova-plugin-splashscreen.git');
-            expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toBeDefined();
-            // Plugin was restored and added to installed plugin list successfully.
-            expect(path.join(pluginsFolderPath, 'cordova-plugin-splashscreen')).toExist();
-        });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
+    });
 });
 
 // Use basePkgJson
