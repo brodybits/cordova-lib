@@ -466,130 +466,49 @@ describe('restore', function () {
                 ]);
             });
         });
-    });
-});
 
-// Use basePkgJson10 as pkg.json contains (camera plugin: var 1/var 2, splashscreen plugin).
-// and config contains (camera plugin: var 3, value 1, device plugin).
-describe('update pkg.json AND config.xml to include all plugins and merge unique variables', function () {
-    var tmpDir = helpers.tmpDir('plugin_test_pkgjson');
-    var project = path.join(tmpDir, 'project');
-    var results;
-    var listener = function (res) { results = res; };
+        /**
+        *   For plugins that are the same, it will merge their variables together for the final list.
+        *   Plugins that are unique to that file, will be copied over to the file that is missing it.
+        *   Config.xml and pkg.json will have identical plugins and variables after cordova prepare.
+        */
+        it('Test#013 : update pkg.json AND config.xml to include all plugins and merge unique variables', function () {
+            setupProject('basePkgJson10');
 
-    beforeEach(function () {
-        shell.rm('-rf', tmpDir);
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson10'), tmpDir);
-        shell.mv(path.join(tmpDir, 'basePkgJson10'), project);
-        process.chdir(project);
-        events.on('results', listener);
-    });
+            expect(getCfg().getPlugins()).toEqual([
+                jasmine.objectContaining({
+                    name: 'cordova-plugin-camera',
+                    variables: { variable_3: 'value_3' }
+                }),
+                jasmine.objectContaining({
+                    name: 'cordova-plugin-splashscreen',
+                    variables: {}
+                })
+            ]);
+            expect(getPkgJson('cordova.plugins')).toEqual({
+                'cordova-plugin-splashscreen': {},
+                'cordova-plugin-camera': { variable_1: ' ', variable_2: ' ' },
+                'cordova-plugin-device': { variable_1: 'value_1' }
+            });
+            expect(installedPlatforms()).toEqual([]);
 
-    afterEach(function () {
-        events.removeListener('results', listener);
-        cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
-    });
-
-    // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        return cordovaPlatform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
+            return prepare({save: true}).then(function () {
+                expectConsistentPlugins([
+                    jasmine.objectContaining({
+                        name: 'cordova-plugin-camera',
+                        variables: { variable_1: ' ', variable_2: ' ', variable_3: 'value_3' }
+                    }),
+                    jasmine.objectContaining({
+                        name: 'cordova-plugin-splashscreen',
+                        variables: {}
+                    }),
+                    jasmine.objectContaining({
+                        name: 'cordova-plugin-device',
+                        variables: { variable_1: 'value_1' }
+                    })
+                ]);
+            });
         });
-    }
-    /** Test#013 will check the plugin/variable list in package.json and config.xml.
-    *   For plugins that are the same, it will merge their variables together for the final list.
-    *   Plugins that are unique to that file, will be copied over to the file that is missing it.
-    *   Config.xml and pkg.json will have identical plugins and variables after cordova prepare.
-    */
-    it('Test#013 : update pkg.json AND config.xml to include all plugins and merge unique variables', function () {
-        var cwd = process.cwd();
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        cordova_util.requireNoCache(pkgJsonPath);
-        var cfg1 = new ConfigParser(configXmlPath);
-        var configPlugins = cfg1.getPluginIdList();
-        var pkgJson = require(pkgJsonPath);
-        var configPlugin;
-        var configPluginVariables;
-        var pluginsFolderPath13 = path.join(cwd, 'plugins');
-
-        // Config.xml has 2 plugins and does not have device plugin yet.
-        expect(Object.keys(configPlugins).length === 2);
-        expect(configPlugins.indexOf('cordova-plugin-device')).toEqual(-1);
-        expect(configPlugins.indexOf('cordova-plugin-camera')).toEqual(0);
-        expect(configPlugins.indexOf('cordova-plugin-splashscreen')).toEqual(1);
-        // Config.xml camera plugin has var_3,value_3 and splashscreen has 0 variables.
-        for (var i = 0; i < configPlugins.length; i++) {
-            configPlugin = cfg1.getPlugin(configPlugins[i]);
-            configPluginVariables = configPlugin.variables;
-            if (configPlugin.name === 'cordova-plugin-camera') {
-                expect(configPluginVariables).toEqual({ variable_3: 'value_3' });
-            }
-            if (configPlugin.name === 'cordova-plugin-splashscreen') {
-                expect(configPluginVariables).toEqual({});
-            }
-        }
-        // Expect that pkg.json exists with 3 plugins (camera, device, and splashscreen)
-        expect(pkgJson.cordova.plugins).toBeDefined();
-        expect(Object.keys(pkgJson.cordova.plugins).length === 3);
-        expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-        expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toBeDefined();
-        expect(pkgJson.cordova.plugins['cordova-plugin-device']).toBeDefined();
-        // Splashscreen has no variables and camera has var_1 and var_2 and device has var_1, val_1.
-        expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toEqual({});
-        expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toEqual({ variable_1: ' ', variable_2: ' ' });
-        expect(pkgJson.cordova.plugins['cordova-plugin-device']).toEqual({ variable_1: 'value_1' });
-
-        return emptyPlatformList().then(function () {
-            // Run cordova prepare.
-            return prepare({'save': true});
-        }).then(function () {
-            // Delete any previous caches of require(package.json).
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            var cfg2 = new ConfigParser(configXmlPath);
-            configPlugins = cfg2.getPluginIdList();
-            // Check to make sure that variables were added as expected.
-            for (var i = 0; i < configPlugins.length; i++) {
-                configPlugin = cfg2.getPlugin(configPlugins[i]);
-                configPluginVariables = configPlugin.variables;
-                // Config.xml camera variables have been merged, no duplicates.
-                if (configPlugin.name === 'cordova-plugin-camera') {
-                    expect(configPluginVariables).toEqual({ variable_1: ' ',
-                        variable_2: ' ',
-                        variable_3: 'value_3' });
-                }
-                // Expect that device has var1, val1 and splashscreen has 0 var.
-                if (configPlugin.name === 'cordova-plugin-device') {
-                    expect(configPluginVariables).toEqual({ variable_1: 'value_1' });
-                }
-                if (configPlugin.name === 'cordova-plugin-splashscreen') {
-                    expect(configPluginVariables).toEqual({});
-                }
-            }
-            // Expect pkg.json to have the variables from config.xml.
-            expect(Object.keys(pkgJson.cordova.plugins).length === 3);
-            expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-            expect(pkgJson.cordova.plugins['cordova-plugin-splashscreen']).toBeDefined();
-            expect(pkgJson.cordova.plugins['cordova-plugin-device']).toBeDefined();
-            expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toEqual({ variable_1: ' ', variable_2: ' ', variable_3: 'value_3' });
-            // Expect config.xml to have the plugins from pkg.json.
-            expect(Object.keys(configPlugins).length === 3);
-            expect(configPlugins.indexOf('cordova-plugin-device')).toEqual(2);
-            expect(configPlugins.indexOf('cordova-plugin-splashscreen')).toEqual(1);
-            expect(configPlugins.indexOf('cordova-plugin-camera')).toEqual(0);
-            // Expect all 3 plugins to be restored.
-            expect(path.join(pluginsFolderPath13, 'cordova-plugin-device')).toExist();
-            expect(path.join(pluginsFolderPath13, 'cordova-plugin-camera')).toExist();
-            expect(path.join(pluginsFolderPath13, 'cordova-plugin-splashscreen')).toExist();
-        });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
 });
 
 // Use basePkgJson11 as pkg.json contains(splashscreen plugin, camera plugin: var1, value1, var2, value2) and
