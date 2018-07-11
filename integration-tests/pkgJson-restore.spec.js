@@ -407,176 +407,66 @@ describe('restore', function () {
             });
         });
     });
-});
 
-// Plugin testing begins here.
+    // These tests will check the plugin/variable list in package.json and config.xml.
+    describe('plugins', function () {
 
-// Use basePkgJson8 as pkg.json contains 1 plugin and 1 variable and config contains 1 plugin 1 var
-// Same variable, different values... pkg.json should win
-describe('update config.xml to use the variable found in pkg.json', function () {
-    var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-    var project = path.join(tmpDir, 'project');
-    var results;
-    var listener = function (res) { results = res; };
+        /**
+        *   When pkg.json and config.xml define different values for a plugin variable,
+        *   pkg.json should win and that value will be used to replace config's value.
+        */
+        it('Test#011 : if pkg.Json has 1 plugin and 1 variable, update config.xml to include these variables', function () {
+            setupProject('basePkgJson8');
 
-    beforeEach(function () {
-        shell.rm('-rf', tmpDir);
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson8'), tmpDir);
-        shell.mv(path.join(tmpDir, 'basePkgJson8'), project);
-        process.chdir(project);
-        events.on('results', listener);
-    });
+            expect(getCfg().getPlugins()).toEqual([
+                jasmine.objectContaining({
+                    name: 'cordova-plugin-camera',
+                    variables: { variable_1: 'config' }
+                })
+            ]);
+            expect(getPkgJson('cordova.plugins')).toEqual({
+                'cordova-plugin-camera': { variable_1: 'json' }
+            });
+            expect(installedPlatforms()).toEqual([]);
 
-    afterEach(function () {
-        events.removeListener('results', listener);
-        cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
-    });
-    // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        return cordovaPlatform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
+            return prepare({save: true}).then(function () {
+                expectConsistentPlugins([
+                    jasmine.objectContaining({
+                        name: 'cordova-plugin-camera',
+                        variables: { variable_1: 'json' }
+                    })
+                ]);
+            });
         });
-    }
-    /** Test#011 will check the plugin/variable list in package.json and config.xml.
-    *   When pkg.json and config.xml have the same variables, but different values,
-    *   pkg.json should win and that value will be used and replaces config's value.
-    */
-    it('Test#011 : if pkg.Json has 1 plugin and 1 variable, update config.xml to include these variables', function () {
-        var cwd = process.cwd();
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        cordova_util.requireNoCache(pkgJsonPath);
-        var cfg1 = new ConfigParser(configXmlPath);
-        var configPlugins = cfg1.getPluginIdList();
-        var configPlugin = cfg1.getPlugin(configPlugins);
-        var configPluginVariables = configPlugin.variables;
-        var pkgJson = require(pkgJsonPath);
-        var pluginsFolderPath = path.join(cwd, 'plugins');
 
-        // Expect that pkg.json exists with 1 plugin, 1 variable, and a different value ('json').
-        expect(pkgJson.cordova.plugins).toBeDefined();
-        expect(Object.keys(pkgJson.cordova.plugins).length === 1);
-        expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-        expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toEqual({ variable_1: 'json' });
-        // Expect that config.xml exists with 1 plugin, 1 variable, but a different value ('config').
-        expect(configPlugin.name).toEqual('cordova-plugin-camera');
-        expect(configPluginVariables).toEqual({ variable_1: 'config' });
-        expect(Object.keys(configPlugin).length === 1);
+        /**
+        *   When config.xml and pkg.json share a common plugin but pkg.json defines no variables for it,
+        *   prepare will update pkg.json to match config.xml's plugins/variables.
+        */
+        it('Test#012 : if pkg.Json has 1 plugin and 2 variables, update config.xml to include these plugins/variables', function () {
+            setupProject('basePkgJson9');
 
-        return emptyPlatformList().then(function () {
-            // Run cordova prepare.
-            return prepare({'save': true});
-        }).then(function () {
-            // Delete any previous caches of require(package.json).
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            var cfg2 = new ConfigParser(configXmlPath);
-            configPlugins = cfg2.getPluginIdList();
-            configPlugin = cfg2.getPlugin(configPlugins);
-            configPluginVariables = configPlugin.variables;
-            // Expect that pkg.json exists with 1 plugin, 1 variable, and the pkg.json value.
-            expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-            expect(Object.keys(pkgJson.cordova.plugins).length === 1);
-            expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toEqual({ variable_1: 'json' });
-            // Expect that config.xml exists with 1 plugin, 1 variable and pkg.json's value.
-            expect(configPlugin.name).toEqual('cordova-plugin-camera');
-            expect(configPluginVariables).toEqual({ variable_1: 'json' });
-            expect(Object.keys(configPlugin).length === 1);
-            // Expect that the camera plugin is restored.
-            expect(path.join(pluginsFolderPath, 'cordova-plugin-camera')).toExist();
+            expect(getCfg().getPlugins()).toEqual([
+                jasmine.objectContaining({
+                    name: 'cordova-plugin-camera',
+                    variables: { variable_1: 'value_1' }
+                })
+            ]);
+            expect(getPkgJson('cordova.plugins')).toEqual({
+                'cordova-plugin-camera': {}
+            });
+            expect(installedPlatforms()).toEqual([]);
+
+            return prepare({save: true}).then(function () {
+                expectConsistentPlugins([
+                    jasmine.objectContaining({
+                        name: 'cordova-plugin-camera',
+                        variables: { variable_1: 'value_1' }
+                    })
+                ]);
+            });
         });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
-});
-
-// Use basePkgJson9 as config contains 1 plugin and 1 variable and pkg.json contains 1 plugin 0 var
-describe('update pkg.json to include plugin and variable found in config.xml', function () {
-    var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-    var project = path.join(tmpDir, 'project');
-    var results;
-    var listener = function (res) { results = res; };
-
-    beforeEach(function () {
-        shell.rm('-rf', tmpDir);
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson9'), tmpDir);
-        shell.mv(path.join(tmpDir, 'basePkgJson9'), project);
-        process.chdir(project);
-        events.on('results', listener);
     });
-
-    afterEach(function () {
-        events.removeListener('results', listener);
-        cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
-    });
-
-    // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        return cordovaPlatform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-        });
-    }
-    /** Test#012 will check the plugin/variable list in package.json and config.xml.
-    *   When config.xml has a 'camera plugin and 1 variable' and pkg.json has 1 plugins/0 variables,
-    *   cordova prepare runs and will update pkg.json to match config.xml's plugins/variables.
-    */
-    it('Test#012 : if pkg.Json has 1 plugin and 2 variables, update config.xml to include these plugins/variables', function () {
-        var cwd = process.cwd();
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var pkgJsonPath = path.join(cwd, 'package.json');
-        // Delete any previous caches of require(package.json).
-        cordova_util.requireNoCache(pkgJsonPath);
-        var cfg1 = new ConfigParser(configXmlPath);
-        var configPlugins = cfg1.getPluginIdList();
-        var configPlugin = cfg1.getPlugin(configPlugins);
-        var configPluginVariables = configPlugin.variables;
-        var pkgJson = require(pkgJsonPath);
-        var pluginsFolderPath12 = path.join(cwd, 'plugins');
-
-        // Expect that pkg.json exists with 1 plugin without a variable.
-        expect(pkgJson.cordova.plugins).toBeDefined();
-        expect(Object.keys(pkgJson.cordova.plugins).length === 1);
-        expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-        expect(pkgJson.cordova.plugins).toEqual({ 'cordova-plugin-camera': {} });
-
-        // Expect that config.xml exists with 1 plugin and 1 variable with value_1.
-        expect(configPlugin.name).toEqual('cordova-plugin-camera');
-        expect(configPluginVariables).toEqual({ variable_1: 'value_1' });
-        expect(Object.keys(configPlugin).length === 1);
-
-        return emptyPlatformList().then(function () {
-            // Run cordova prepare.
-            return prepare({'save': true});
-        }).then(function () {
-            // Delete any previous caches of require(package.json).
-            pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            var cfg2 = new ConfigParser(configXmlPath);
-            configPlugins = cfg2.getPluginIdList();
-            configPlugin = cfg2.getPlugin(configPlugins);
-            configPluginVariables = configPlugin.variables;
-            // Expect that pkg.json exists with 1 plugin, 1 variable, and 1 value.
-            expect(pkgJson.cordova.plugins['cordova-plugin-camera']).toBeDefined();
-            expect(Object.keys(pkgJson.cordova.plugins).length === 1);
-            expect(pkgJson.cordova.plugins).toEqual({ 'cordova-plugin-camera': { variable_1: 'value_1' } });
-            // Expect that config.xml exists with 1 plugin, 1 variable and 1 value.
-            expect(configPlugin.name).toEqual('cordova-plugin-camera');
-            expect(configPluginVariables).toEqual({ variable_1: 'value_1' });
-            expect(Object.keys(configPlugin).length === 1);
-            // Expect camera to be restored and in the installed plugin list.
-            expect(path.join(pluginsFolderPath12, 'cordova-plugin-camera')).toExist();
-        });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
 });
 
 // Use basePkgJson10 as pkg.json contains (camera plugin: var 1/var 2, splashscreen plugin).
