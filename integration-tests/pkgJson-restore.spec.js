@@ -24,13 +24,6 @@ const { ConfigParser } = require('cordova-common');
 const { listPlatforms, requireNoCache } = require('../src/cordova/util');
 const { tmpDir: getTmpDir, testPlatform, setDefaultTimeout } = require('../spec/helpers');
 
-// XXX
-var helpers = require('../spec/helpers');
-var shell = require('shelljs');
-var events = require('cordova-common').events;
-var cordova_util = require('../src/cordova/util');
-var TIMEOUT = 240 * 1000;
-
 /** Testing will check if "cordova prepare" is restoring platforms and plugins as expected.
 *   Uses different basePkgJson files depending on testing expecations of what (platforms/plugins/variables)
 *   should initially be in pkg.json and/or config.xml.
