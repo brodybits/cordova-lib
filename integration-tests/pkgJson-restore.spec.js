@@ -580,139 +580,65 @@ describe('restore', function () {
             });
         });
     });
-});
 
-// Use basePkgJson13 - does NOT have a package.json
-describe('platforms and plugins should be restored with config.xml even without a pkg.json', function () {
-    var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-    var project = path.join(tmpDir, 'project');
-    var results;
-    var listener = function (res) { results = res; };
+    describe('platforms and plugins should be restored with config.xml even without a pkg.json', function () {
 
-    beforeEach(function () {
-        shell.rm('-rf', tmpDir);
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        // Use basePkgJson13 because pkg.json and config.xml contain only android
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson13'), tmpDir);
-        shell.mv(path.join(tmpDir, 'basePkgJson13'), project);
-        process.chdir(project);
-        events.on('results', listener);
+        /** Test#016 will check that cordova prepare will still restore the correct
+        *   platforms and plugins even without package.json file.
+        */
+        it('Test#016 : platforms and plugins should be restored with config.xml even without a pkg.json', function () {
+            setupProject('basePkgJson13');
+
+            const PLUGIN_ID = 'cordova-plugin-device';
+            var PLATFORM_1 = 'android';
+            var PLATFORM_2 = 'windows';
+
+            { // Block is to limit variable scope
+                const cfg = getCfg();
+
+                expect(pkgJsonPath).not.toExist();
+                expect(getCfgEngineNames(cfg)).toEqual([PLATFORM_1]);
+                expect(cfg.getPluginIdList()).toEqual([PLUGIN_ID]);
+                expect(installedPlatforms()).toEqual([]);
+            }
+
+            return cordovaPlatform('add', PLATFORM_2, {save: true}).then(function () {
+                const cfg = getCfg();
+
+                expect(getCfgEngineNames(cfg)).toEqual([PLATFORM_1, PLATFORM_2]);
+
+                // Package.json should be auto-created using values from config.xml
+                expect(getPkgJson()).toEqual(jasmine.objectContaining({
+                    name: cfg.packageName().toLowerCase(),
+                    version: cfg.version(),
+                    displayName: cfg.name()
+                }));
+            }).then(function () {
+                // TODO the remaining operations should be already covered by existing tests
+                // Remove android without --save.
+                return cordovaPlatform('rm', PLATFORM_2);
+            }).then(function () {
+                return prepare();
+            }).then(function () {
+                const cfg = getCfg();
+                expect(getCfgEngineNames(cfg)).toEqual([PLATFORM_1, PLATFORM_2]);
+                expect(cfg.getPluginIdList()).toEqual([PLUGIN_ID]);
+                expect(pluginPath(PLUGIN_ID)).toExist();
+            }).then(function () {
+                // Remove plugin without save.
+                return cordovaPlugin('rm', PLUGIN_ID);
+            }).then(function () {
+                expect(getCfg().getPluginIdList()).toEqual([PLUGIN_ID]);
+                // Plugin should be removed from the installed list.
+                expect(pluginPath(PLUGIN_ID)).not.toExist();
+            }).then(function () {
+                return prepare();
+            }).then(function () {
+                // Plugin should be restored and returned to the installed list.
+                expect(pluginPath(PLUGIN_ID)).toExist();
+            });
+        });
     });
-
-    afterEach(function () {
-        events.removeListener('results', listener);
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
-    });
-
-    // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        return cordovaPlatform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-        });
-    }
-    /** Test#016 will check that cordova prepare will still restore the correct
-    *   platforms and plugins even without package.json file.
-    */
-    it('Test#016 : platforms and plugins should be restored with config.xml even without a pkg.json', function () {
-        var cwd = process.cwd();
-        var configXmlPath = path.join(cwd, 'config.xml');
-        var cfg1 = new ConfigParser(configXmlPath);
-        var engines = cfg1.getEngines();
-        var engNames = engines.map(function (elem) {
-            return elem.name;
-        });
-        var configEngArray = engNames.slice();
-        var configPlugins = cfg1.getPluginIdList();
-        var pluginsFolderPath16 = path.join(cwd, 'plugins');
-        var androidPlatform = 'android';
-        var browserPlatform = 'windows';
-
-        // Pkg.json does not exist.
-        expect(path.join(cwd, 'package.json')).not.toExist();
-        // Config.xml contains only contains 'android' at this point (basePkgJson13).
-        expect(configEngArray.length === 1);
-        // Config.xml contains only 1 plugin at this point.
-        expect(Object.keys(configPlugins).length === 1);
-
-        return emptyPlatformList().then(function () {
-            // Run platform add.
-            return cordovaPlatform('add', browserPlatform, {'save': true});
-        }).then(function () {
-            // Android and browser are in config.xml.
-            var cfg3 = new ConfigParser(configXmlPath);
-            engines = cfg3.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            configEngArray = engNames.slice();
-            expect(configEngArray.length === 2);
-            // Package.json should be auto-created.
-            expect(path.join(cwd, 'package.json')).toExist();
-            var pkgJsonPath = path.join(cwd, 'package.json');
-            delete require.cache[require.resolve(pkgJsonPath)];
-            var pkgJson = require(pkgJsonPath);
-            // Expect that pkgJson name, version, and displayName should use
-            // config.xml's id, version, and name.
-            expect(pkgJson.name).toEqual(cfg3.packageName().toLowerCase());
-            expect(pkgJson.version).toEqual(cfg3.version());
-            expect(pkgJson.displayName).toEqual(cfg3.name());
-            // Remove android without --save.
-            return cordovaPlatform('rm', [browserPlatform]);
-        }).then(function () {
-            // Run cordova prepare.
-            return prepare();
-        }).then(function () {
-            var cfg2 = new ConfigParser(configXmlPath);
-            engines = cfg2.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            configEngArray = engNames.slice();
-            // Config.xml should have android and browser.
-            expect(configEngArray.indexOf(androidPlatform)).toBeGreaterThan(-1);
-            expect(configEngArray.indexOf(browserPlatform)).toBeGreaterThan(-1);
-            expect(configEngArray.length === 2);
-        }).then(function () {
-            // Check plugins.
-            var cfg5 = new ConfigParser(configXmlPath);
-            engines = cfg5.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            configEngArray = engNames.slice();
-            // Config.xml contains only one plugin.
-            expect(Object.keys(configPlugins).length === 1);
-            expect(configPlugins.indexOf('cordova-plugin-device')).toEqual(0);
-            // Expect device plugin to be in the installed list.
-            expect(path.join(pluginsFolderPath16, 'cordova-plugin-device')).toExist();
-        }).then(function () {
-            // Remove plugin without save.
-            return cordovaPlugin('rm', 'cordova-plugin-device');
-        }).then(function () {
-            var cfg4 = new ConfigParser(configXmlPath);
-            engines = cfg4.getEngines();
-            engNames = engines.map(function (elem) {
-                return elem.name;
-            });
-            configEngArray = engNames.slice();
-            // Config.xml plugins are the same.
-            expect(Object.keys(configPlugins).length === 1);
-            expect(configPlugins.indexOf('cordova-plugin-device')).toEqual(0);
-            // Plugin should be removed from the installed list.
-            expect(path.join(pluginsFolderPath16, 'cordova-plugin-device')).not.toExist();
-        }).then(function () {
-            // Run cordova prepare.
-            return prepare();
-        }).then(function () {
-            // Plugin should be restored and returned to the installed list.
-            expect(path.join(pluginsFolderPath16, 'cordova-plugin-device')).toExist();
-        });
-    // Cordova prepare needs extra wait time to complete.
-    }, TIMEOUT);
 });
 
 // Use basePkgJson
