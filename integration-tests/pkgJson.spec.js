@@ -28,6 +28,7 @@ var semver = require('semver');
 
 describe('pkgJson', function () {
 
+    const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
     var tmpDir, project, results;
 
     afterEach(function () {
@@ -41,7 +42,7 @@ describe('pkgJson', function () {
 
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
 
-        fs.copySync(path.join(__dirname, '../spec/cordova/fixtures', name), project);
+        fs.copySync(path.join(fixturesPath, name), project);
         process.chdir(project);
         delete process.env.PWD;
         events.on('results', function (res) { results = res; });
@@ -68,7 +69,6 @@ describe('pkgJson', function () {
     // This group of tests checks if plugins are added and removed as expected from package.json.
     describe('plugin end-to-end', function () {
         var pluginId = 'cordova-plugin-device';
-        var testRunRoot = process.cwd();
 
         beforeEach(function () {
             setup('basePkgJson');
@@ -303,8 +303,8 @@ describe('pkgJson', function () {
         it('Test#025 : if you add a platform/plugin with local path, pkg.json gets updated', function () {
 
             var cwd = process.cwd();
-            var platformPath = path.join(testRunRoot, 'spec', 'cordova/fixtures/platforms/cordova-browser');
-            var pluginPath = path.join(testRunRoot, 'spec', 'cordova/fixtures/plugins/cordova-lib-test-plugin');
+            var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
+            var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var pkgJsonPath = path.join(cwd, 'package.json');
             var pkgJson;
             var configXmlPath = path.join(cwd, 'config.xml');
@@ -754,8 +754,6 @@ describe('pkgJson', function () {
 
     // No pkg.json included in test file.
     describe('local path is added to config.xml without pkg.json', function () {
-        var testRunRoot = process.cwd();
-
         beforeEach(() => setup('basePkgJson13'));
 
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
@@ -766,7 +764,7 @@ describe('pkgJson', function () {
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
             var engSpec; // eslint-disable-line no-unused-vars
-            var platformPath = path.join(testRunRoot, 'spec', 'cordova/fixtures/platforms/cordova-browser');
+            var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
 
             // Run cordova platform add local path --save --fetch.
             return cordova.platform('add', platformPath, {'save': true})
@@ -789,7 +787,7 @@ describe('pkgJson', function () {
         // Test#027: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#027 : if you add a plugin with local path, config.xml gets updated', function () {
             var cwd = process.cwd();
-            var pluginPath = path.join(testRunRoot, 'spec', 'cordova/fixtures/plugins/cordova-lib-test-plugin');
+            var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
