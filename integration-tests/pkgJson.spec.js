@@ -82,7 +82,6 @@ describe('pkgJson', function () {
 
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
             var pkgJson = require(pkgJsonPath);
-            var cwd = process.cwd();
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
@@ -230,9 +229,8 @@ describe('pkgJson', function () {
         it('Test#023 : use pinned/lastest version if there is no platform/plugin version passed in and no platform/plugin versions in pkg.json or config.xml', function () {
             var iosPlatform = 'ios';
             var iosVersion;
-            var cwd = process.cwd();
-            var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
-            var iosJsonPath = path.join(cwd, 'platforms/ios/ios.json');
+            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
+            var iosJsonPath = path.join(project, 'platforms/ios/ios.json');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -240,7 +238,7 @@ describe('pkgJson', function () {
             var engSpec; // eslint-disable-line no-unused-vars
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
-            var pluginPkgJsonDir = path.join(cwd, 'plugins/cordova-plugin-geolocation/package.json');
+            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-geolocation/package.json');
             var pluginPkgJsonVersion;
 
             // Pkg.json has no platform or plugin or specs.
@@ -296,7 +294,6 @@ describe('pkgJson', function () {
         // Test#025: has a pkg.json. Checks if local path is added to pkg.json for platform and plugin add.
         it('Test#025 : if you add a platform/plugin with local path, pkg.json gets updated', function () {
 
-            var cwd = process.cwd();
             var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
             var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var pkgJson;
@@ -460,7 +457,6 @@ describe('pkgJson', function () {
             var pkgJson;
             // Delete any previous caches of require(package.json).
             pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-            var cwd = process.cwd();
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames = engines.map(function (elem) {
@@ -534,15 +530,14 @@ describe('pkgJson', function () {
         it('Test#020 : During add, if pkg.json has a spec, use that one.', function () {
             var iosPlatform = 'ios';
             var iosVersion;
-            var cwd = process.cwd();
-            var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
+            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames;
             var engSpec; // eslint-disable-line no-unused-vars
             var configPlugins = cfg.getPluginIdList();
-            var pluginPkgJsonDir = path.join(cwd, 'plugins/cordova-plugin-splashscreen/package.json');
+            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
             var pluginPkgJsonVersion;
 
             // Pkg.json has ios and spec '^4.2.1' and splashscreen '^3.2.2'.
@@ -603,8 +598,7 @@ describe('pkgJson', function () {
         it('Test#021 : If config.xml has a spec (and none was specified and pkg.json does not have one), use config.', function () {
             var iosPlatform = 'ios';
             var iosVersion;
-            var cwd = process.cwd();
-            var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
+            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
             var cfg = new ConfigParser(configXmlPath);
             var pkgJson;
             var engines = cfg.getEngines();
@@ -612,7 +606,7 @@ describe('pkgJson', function () {
             var engSpec; // eslint-disable-line no-unused-vars
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
-            var pluginPkgJsonDir = path.join(cwd, 'plugins/cordova-plugin-splashscreen/package.json');
+            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
             var pluginPkgJsonVersion;
 
             // Pkg.json does not have platform or spec yet. Config.xml has ios and spec '~4.2.1'.
@@ -671,15 +665,14 @@ describe('pkgJson', function () {
         it('Test#022 : when adding with a specific platform version, always use that one.', function () {
             var iosPlatform = 'ios';
             var iosVersion;
-            var cwd = process.cwd();
-            var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
+            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames;
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
-            var pluginPkgJsonDir = path.join(cwd, 'plugins/cordova-plugin-splashscreen/package.json');
+            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
             var pluginPkgJsonVersion;
 
             // Pkg.json has ios and spec '^4.2.1'.
@@ -738,7 +731,6 @@ describe('pkgJson', function () {
 
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#026 : if you add a platform with local path, config.xml gets updated', function () {
-            var cwd = process.cwd();
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
@@ -765,7 +757,6 @@ describe('pkgJson', function () {
 
         // Test#027: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#027 : if you add a plugin with local path, config.xml gets updated', function () {
-            var cwd = process.cwd();
             var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
