@@ -29,7 +29,7 @@ var semver = require('semver');
 describe('pkgJson', function () {
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
-    var tmpDir, project, results, pkgJsonPath;
+    var tmpDir, project, results, pkgJsonPath, configXmlPath;
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
@@ -40,6 +40,7 @@ describe('pkgJson', function () {
         tmpDir = helpers.tmpDir('pkgJson');
         project = path.join(tmpDir, 'project');
         pkgJsonPath = path.join(project, 'package.json');
+        configXmlPath = path.join(project, 'config.xml');
 
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
 
@@ -82,7 +83,6 @@ describe('pkgJson', function () {
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
             var pkgJson = require(pkgJsonPath);
             var cwd = process.cwd();
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
@@ -233,7 +233,6 @@ describe('pkgJson', function () {
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
             var iosJsonPath = path.join(cwd, 'platforms/ios/ios.json');
-            var configXmlPath = path.join(cwd, 'config.xml');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -301,7 +300,6 @@ describe('pkgJson', function () {
             var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
             var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var pkgJson;
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
@@ -463,7 +461,6 @@ describe('pkgJson', function () {
             // Delete any previous caches of require(package.json).
             pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cwd = process.cwd();
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames = engines.map(function (elem) {
@@ -539,7 +536,6 @@ describe('pkgJson', function () {
             var iosVersion;
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
-            var configXmlPath = path.join(cwd, 'config.xml');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -609,7 +605,6 @@ describe('pkgJson', function () {
             var iosVersion;
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var pkgJson;
             var engines = cfg.getEngines();
@@ -678,7 +673,6 @@ describe('pkgJson', function () {
             var iosVersion;
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
-            var configXmlPath = path.join(cwd, 'config.xml');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -745,7 +739,6 @@ describe('pkgJson', function () {
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#026 : if you add a platform with local path, config.xml gets updated', function () {
             var cwd = process.cwd();
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
@@ -774,7 +767,6 @@ describe('pkgJson', function () {
         it('Test#027 : if you add a plugin with local path, config.xml gets updated', function () {
             var cwd = process.cwd();
             var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
-            var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
