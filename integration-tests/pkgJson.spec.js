@@ -28,6 +28,28 @@ var semver = require('semver');
 
 describe('pkgJson', function () {
 
+    var tmpDir = helpers.tmpDir('pkgJson');
+    var project = path.join(tmpDir, 'project');
+    var results;
+
+    afterEach(function () {
+        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
+        shell.rm('-rf', tmpDir);
+    });
+
+    function setup (name) {
+        jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
+        shell.rm('-rf', tmpDir);
+
+        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
+        // Using /* doesn't work because of hidden files.
+        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', name), tmpDir);
+        shell.mv(path.join(tmpDir, name), project);
+        process.chdir(project);
+        delete process.env.PWD;
+        events.on('results', function (res) { results = res; });
+    }
+
     function includeFunc (container, value) {
         var returnValue = false;
         var pos = container.indexOf(value);
@@ -40,31 +62,13 @@ describe('pkgJson', function () {
     // This group of tests checks if plugins are added and removed as expected from package.json.
     describe('plugin end-to-end', function () {
         var pluginId = 'cordova-plugin-device';
-        var tmpDir = helpers.tmpDir('plugin_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results; // eslint-disable-line no-unused-vars
         var testRunRoot = process.cwd();
 
-        events.on('results', function (res) { results = res; });
-
         beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', project);
-
-            // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson'), project);
+            setup('basePkgJson');
             // Copy some platform to avoid working on a project with no platforms.
             // FIXME Use a fixture that is properly promisified. This one causes spurious test failures
             // shell.cp('-R', path.join(__dirname, '../spec/plugman/projects', helpers.testPlatform), path.join(project, 'platforms'));
-            process.chdir(project);
-            delete process.env.PWD;
-        });
-
-        afterEach(function () {
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', project);
         });
 
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
@@ -356,28 +360,7 @@ describe('pkgJson', function () {
 
     // This group of tests checks if platforms are added and removed as expected from package.json.
     describe('platform end-to-end with --save', function () {
-        var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results;
-
-        beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', tmpDir);
-
-            // cp then mv because we need to copy everything, but that means it'll copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson'), project);
-            process.chdir(project);
-            events.on('results', function (res) { results = res; });
-        });
-
-        afterEach(function () {
-            // Delete any previous caches of require(package.json).
-            cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', tmpDir);
-        });
+        beforeEach(() => setup('basePkgJson'));
 
         // Factoring out some repeated checks.
         function emptyPlatformList () {
@@ -558,28 +541,7 @@ describe('pkgJson', function () {
 
     // Test #020 : use basePkgJson15 as pkg.json contains platform/spec and plugin/spec and config.xml does not.
     describe('During add, if pkg.json has a platform/plugin spec, use that one.', function () {
-        var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results;
-
-        beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', tmpDir);
-
-            // cp then mv because we need to copy everything, but that means it'll copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson15'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson15'), project);
-            process.chdir(project);
-            events.on('results', function (res) { results = res; });
-        });
-
-        afterEach(function () {
-            // Delete any previous caches of require(package.json).
-            cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', tmpDir);
-        });
+        beforeEach(() => setup('basePkgJson15'));
 
         // Factoring out some repeated checks.
         function emptyPlatformList () {
@@ -659,27 +621,7 @@ describe('pkgJson', function () {
 
     // Test #021 : use basePkgJson16 as config.xml contains platform/spec and plugin/spec pkg.json does not.
     describe('During add, if config.xml has a platform/plugin spec and pkg.json does not, use config.', function () {
-        var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results;
-
-        beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', tmpDir);
-
-            // cp then mv because we need to copy everything, but that means it'll copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson16'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson16'), project);
-            process.chdir(project);
-            events.on('results', function (res) { results = res; });
-        });
-
-        afterEach(function () {
-            // Delete any previous caches of require(package.json).
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', tmpDir);
-        });
+        beforeEach(() => setup('basePkgJson16'));
 
         // Factoring out some repeated checks.
         function emptyPlatformList () {
@@ -758,27 +700,7 @@ describe('pkgJson', function () {
 
     // Test #022 : use basePkgJson17 (config.xml and pkg.json each have ios platform with different specs).
     describe('During add, if add specifies a platform spec, use that one regardless of what is in pkg.json or config.xml', function () {
-        var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results;
-
-        beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', tmpDir);
-            // cp then mv because we need to copy everything, but that means it'll copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson17'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson17'), project);
-            process.chdir(project);
-            events.on('results', function (res) { results = res; });
-        });
-
-        afterEach(function () {
-            // Delete any previous caches of require(package.json).
-            cordova_util.requireNoCache(path.join(process.cwd(), 'package.json'));
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', tmpDir);
-        });
+        beforeEach(() => setup('basePkgJson17'));
 
         // Factoring out some repeated checks.
         function emptyPlatformList () {
@@ -860,27 +782,9 @@ describe('pkgJson', function () {
 
     // No pkg.json included in test file.
     describe('local path is added to config.xml without pkg.json', function () {
-        var tmpDir = helpers.tmpDir('platform_test_pkgjson');
-        var project = path.join(tmpDir, 'project');
-        var results; // eslint-disable-line no-unused-vars
         var testRunRoot = process.cwd();
 
-        beforeEach(function () {
-            jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-            shell.rm('-rf', tmpDir);
-
-            // cp then mv because we need to copy everything, but that means it'll copy the whole directory.
-            // Using /* doesn't work because of hidden files.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson13'), tmpDir);
-            shell.mv(path.join(tmpDir, 'basePkgJson13'), project);
-            process.chdir(project);
-            events.on('results', function (res) { results = res; });
-        });
-
-        afterEach(function () {
-            process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-            shell.rm('-rf', tmpDir);
-        });
+        beforeEach(() => setup('basePkgJson13'));
 
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#026 : if you add a platform with local path, config.xml gets updated', function () {
