@@ -379,16 +379,17 @@ describe('pkgJson', function () {
                 pkgJson = require(pkgJsonPath);
                 expect(pkgJson.cordova.platforms).not.toBeUndefined();
                 expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toEqual(0);
-            }).then(fullPlatformList) // Platform should still be in platform ls.
-                .then(function () {
-                    // And now remove it with --save.
-                    return cordova.platform('rm', [helpers.testPlatform], {'save': true});
-                }).then(function () {
-                    // Delete any previous caches of require(package.json).
-                    pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-                    // Checking that the platform removed is in not in the platforms key.
-                    expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toEqual(-1);
-                });
+            }).then(function () {
+                return fullPlatformList();
+            }).then(function () {
+                // And now remove it with --save.
+                return cordova.platform('rm', [helpers.testPlatform], {'save': true});
+            }).then(function () {
+                // Delete any previous caches of require(package.json).
+                pkgJson = cordova_util.requireNoCache(pkgJsonPath);
+                // Checking that the platform removed is in not in the platforms key.
+                expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toEqual(-1);
+            });
         });
 
         it('Test#007 : should not remove platforms from package.json when removing without --save', function () {
@@ -403,16 +404,19 @@ describe('pkgJson', function () {
                 pkgJson = cordova_util.requireNoCache(pkgJsonPath);
                 expect(pkgJson.cordova.platforms).not.toBeUndefined();
                 expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
-            }).then(fullPlatformList) // Platform should still be in platform ls.
-                .then(function () {
-                    // And now remove it without --save.
-                    return cordova.platform('rm', [helpers.testPlatform]);
-                }).then(function () {
-                    // Delete any previous caches of require(package.json).
-                    pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-                    // Check that the platform removed without --save is still in platforms key.
-                    expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
-                }).then(emptyPlatformList);
+            }).then(function () {
+                return fullPlatformList();
+            }).then(function () {
+                // And now remove it without --save.
+                return cordova.platform('rm', [helpers.testPlatform]);
+            }).then(function () {
+                // Delete any previous caches of require(package.json).
+                pkgJson = cordova_util.requireNoCache(pkgJsonPath);
+                // Check that the platform removed without --save is still in platforms key.
+                expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
+            }).then(function () {
+                return emptyPlatformList();
+            });
         });
 
         it('Test#008 : should not add platform to package.json when adding without --save', function () {
@@ -428,7 +432,9 @@ describe('pkgJson', function () {
                     pkgJson = cordova_util.requireNoCache(pkgJsonPath);
                     // PkgJson.cordova should not be defined and helpers.testPlatform should NOT have been added.
                     expect(pkgJson.cordova).toBeUndefined();
-                }).then(fullPlatformList);
+                }).then(function () {
+                    return fullPlatformList();
+                });
         });
 
         it('Test#009 : should only add the platform to package.json with --save', function () {
@@ -493,30 +499,32 @@ describe('pkgJson', function () {
                 // Check that android and browser were added to config.xml with the correct spec.
                 expect(configEngArray.length === 2);
                 expect(engines).toEqual([ { name: 'android', spec: '~7.0.0' }, { name: 'browser', spec: '~5.0.1' } ]);
-
-            }).then(fullPlatformList) // Platform should still be in platform ls.
-                .then(function () {
-                    // And now remove it with --save.
-                    return cordova.platform('rm', ['android', 'browser'], {'save': true});
-                }).then(function () {
-                    // Delete any previous caches of require(package.json).
-                    pkgJson = cordova_util.requireNoCache(pkgJsonPath);
-                    // Checking that the platform removed is in not in the platforms key.
-                    expect(pkgJson.cordova.platforms.indexOf('android')).toEqual(-1);
-                    expect(pkgJson.cordova.platforms.indexOf('browser')).toEqual(-1);
-                    // Dependencies are removed.
-                    expect(pkgJson.dependencies['cordova-android']).toBeUndefined();
-                    expect(pkgJson.dependencies['cordova-browser']).toBeUndefined();
-                    // Platforms are removed from config.xml.
-                    var cfg4 = new ConfigParser(configXmlPath);
-                    engines = cfg4.getEngines();
-                    engNames = engines.map(function (elem) {
-                        return elem.name;
-                    });
-                    configEngArray = engNames.slice();
-                    // Platforms are removed from config.xml.
-                    expect(configEngArray.length === 0);
-                }).then(emptyPlatformList); // platform ls should be empty too.;
+            }).then(function () {
+                return fullPlatformList();
+            }).then(function () {
+                // And now remove it with --save.
+                return cordova.platform('rm', ['android', 'browser'], {'save': true});
+            }).then(function () {
+                // Delete any previous caches of require(package.json).
+                pkgJson = cordova_util.requireNoCache(pkgJsonPath);
+                // Checking that the platform removed is in not in the platforms key.
+                expect(pkgJson.cordova.platforms.indexOf('android')).toEqual(-1);
+                expect(pkgJson.cordova.platforms.indexOf('browser')).toEqual(-1);
+                // Dependencies are removed.
+                expect(pkgJson.dependencies['cordova-android']).toBeUndefined();
+                expect(pkgJson.dependencies['cordova-browser']).toBeUndefined();
+                // Platforms are removed from config.xml.
+                var cfg4 = new ConfigParser(configXmlPath);
+                engines = cfg4.getEngines();
+                engNames = engines.map(function (elem) {
+                    return elem.name;
+                });
+                configEngArray = engNames.slice();
+                // Platforms are removed from config.xml.
+                expect(configEngArray.length === 0);
+            }).then(function () {
+                return emptyPlatformList();
+            });
         });
     });
 
