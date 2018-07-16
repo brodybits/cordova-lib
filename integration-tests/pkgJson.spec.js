@@ -47,6 +47,15 @@ describe('pkgJson', function () {
         events.on('results', function (res) { results = res; });
     }
 
+    // Factoring out some repeated checks.
+    function emptyPlatformList () {
+        return cordova.platform('list').then(function () {
+            var installed = results.match(/Installed platforms:\n {2}(.*)/);
+            expect(installed).toBeDefined();
+            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
+        });
+    }
+
     function includeFunc (container, value) {
         var returnValue = false;
         var pos = container.indexOf(value);
@@ -360,14 +369,6 @@ describe('pkgJson', function () {
     describe('platform end-to-end with --save', function () {
         beforeEach(() => setup('basePkgJson'));
 
-        // Factoring out some repeated checks.
-        function emptyPlatformList () {
-            return cordova.platform('list').then(function () {
-                var installed = results.match(/Installed platforms:\n {2}(.*)/);
-                expect(installed).toBeDefined();
-                expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-            });
-        }
         function fullPlatformList () {
             return cordova.platform('list').then(function () {
                 var installed = results.match(/Installed platforms:\n {2}(.*)/);
@@ -541,15 +542,6 @@ describe('pkgJson', function () {
     describe('During add, if pkg.json has a platform/plugin spec, use that one.', function () {
         beforeEach(() => setup('basePkgJson15'));
 
-        // Factoring out some repeated checks.
-        function emptyPlatformList () {
-            return cordova.platform('list').then(function () {
-                var installed = results.match(/Installed platforms:\n {2}(.*)/);
-                expect(installed).toBeDefined();
-                expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-            });
-        }
-
         /** Test#020 will check that pkg.json, config.xml, platforms.json, and cordova platform ls
         *   are updated with the correct (platform and plugin) specs from pkg.json.
         */
@@ -621,15 +613,6 @@ describe('pkgJson', function () {
     describe('During add, if config.xml has a platform/plugin spec and pkg.json does not, use config.', function () {
         beforeEach(() => setup('basePkgJson16'));
 
-        // Factoring out some repeated checks.
-        function emptyPlatformList () {
-            return cordova.platform('list').then(function () {
-                var installed = results.match(/Installed platforms:\n {2}(.*)/);
-                expect(installed).toBeDefined();
-                expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-            });
-        }
-
         /** Test#021 during add, this test will check that pkg.json, config.xml, platforms.json,
         *   and cordova platform ls are updated with the correct platform/plugin spec from config.xml.
         */
@@ -699,15 +682,6 @@ describe('pkgJson', function () {
     // Test #022 : use basePkgJson17 (config.xml and pkg.json each have ios platform with different specs).
     describe('During add, if add specifies a platform spec, use that one regardless of what is in pkg.json or config.xml', function () {
         beforeEach(() => setup('basePkgJson17'));
-
-        // Factoring out some repeated checks.
-        function emptyPlatformList () {
-            return cordova.platform('list').then(function () {
-                var installed = results.match(/Installed platforms:\n {2}(.*)/);
-                expect(installed).toBeDefined();
-                expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-            });
-        }
 
         /** Test#022 : when adding with a specific platform version, always use that one
         *   regardless of what is in package.json or config.xml.
