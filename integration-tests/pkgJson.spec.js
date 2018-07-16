@@ -22,7 +22,6 @@ var fs = require('fs-extra');
 var events = require('cordova-common').events;
 var ConfigParser = require('cordova-common').ConfigParser;
 var cordova = require('../src/cordova/cordova');
-var TIMEOUT = 120 * 1000;
 var cordova_util = require('../src/cordova/util');
 var semver = require('semver');
 
@@ -30,6 +29,9 @@ describe('pkgJson', function () {
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
     var tmpDir, project, results, pkgJsonPath, configXmlPath;
+
+    const TIMEOUT = 150 * 1000;
+    helpers.setDefaultTimeout(TIMEOUT);
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
@@ -41,8 +43,6 @@ describe('pkgJson', function () {
         project = path.join(tmpDir, 'project');
         pkgJsonPath = path.join(project, 'package.json');
         configXmlPath = path.join(project, 'config.xml');
-
-        jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
 
         fs.copySync(path.join(fixturesPath, name), project);
         process.chdir(project);
@@ -118,7 +118,7 @@ describe('pkgJson', function () {
                     // Spec should be removed from dependencies.
                     expect(pkgJson.dependencies['cordova-plugin-device']).toBeUndefined();
                 });
-        }, TIMEOUT);
+        });
 
         it('Test#002 : should NOT add a plugin to package.json if --save is not used', function () {
             var pkgJson;
@@ -138,7 +138,7 @@ describe('pkgJson', function () {
                     // Expect that the second plugin is not added.
                     expect(pkgJson.cordova.plugins[pluginId]).toBeUndefined();
                 });
-        }, TIMEOUT);
+        });
 
         it('Test#003 : should NOT remove plugin from package.json if there is no --save', function () {
             var pkgJson;
@@ -163,7 +163,7 @@ describe('pkgJson', function () {
                     // The plugin should still be in package.json.
                     expect(pkgJson.cordova.plugins[pluginId]).toBeDefined();
                 });
-        }, TIMEOUT);
+        });
 
         it('Test#004 : should successfully add and remove a plugin with variables and save to package.json', function () {
             var pkgJson;
@@ -190,7 +190,7 @@ describe('pkgJson', function () {
                     // Checking that the plugin and variables were removed successfully.
                     expect(pkgJson.cordova.plugins[pluginId]).toBeUndefined();
                 });
-        }, TIMEOUT);
+        });
 
         // CB-12170 : Test is commented out because not promisified correctly in cordova-create script
         xit('Test#005 : should successfully add and remove multiple plugins with save & fetch', function () {
@@ -223,7 +223,8 @@ describe('pkgJson', function () {
                     expect(pkgJson.dependencies[pluginId]).toBeUndefined();
                     expect(pkgJson.dependencies['cordova-plugin-device-motion']).toBeUndefined();
                 });
-        }, TIMEOUT);
+        });
+
         // Test #023 : if pkg.json and config.xml have no platforms/plugins/spec.
         // and --save --fetch is called, use the pinned version or plugin pkg.json version.
         it('Test#023 : use pinned/lastest version if there is no platform/plugin version passed in and no platform/plugin versions in pkg.json or config.xml', function () {
@@ -288,8 +289,7 @@ describe('pkgJson', function () {
                     // Check that pkg.json and plugin pkg.json versions "satisfy".
                     expect(semver.satisfies(pluginPkgJsonVersion.version, pkgJson.dependencies['cordova-ios']));
                 });
-        // Cordova prepare needs extra wait time to complete.
-        }, TIMEOUT);
+        });
 
         // Test#025: has a pkg.json. Checks if local path is added to pkg.json for platform and plugin add.
         it('Test#025 : if you add a platform/plugin with local path, pkg.json gets updated', function () {
@@ -351,7 +351,7 @@ describe('pkgJson', function () {
                         }
                     });
                 });
-        }, TIMEOUT);
+        });
     });
 
     // This group of tests checks if platforms are added and removed as expected from package.json.
@@ -389,7 +389,7 @@ describe('pkgJson', function () {
                     // Checking that the platform removed is in not in the platforms key.
                     expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toEqual(-1);
                 });
-        }, TIMEOUT);
+        });
 
         it('Test#007 : should not remove platforms from package.json when removing without --save', function () {
             expect(pkgJsonPath).toExist();
@@ -413,7 +413,7 @@ describe('pkgJson', function () {
                     // Check that the platform removed without --save is still in platforms key.
                     expect(pkgJson.cordova.platforms.indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
                 }).then(emptyPlatformList);
-        }, TIMEOUT);
+        });
 
         it('Test#008 : should not add platform to package.json when adding without --save', function () {
             expect(pkgJsonPath).toExist();
@@ -429,7 +429,7 @@ describe('pkgJson', function () {
                     // PkgJson.cordova should not be defined and helpers.testPlatform should NOT have been added.
                     expect(pkgJson.cordova).toBeUndefined();
                 }).then(fullPlatformList);
-        }, TIMEOUT);
+        });
 
         it('Test#009 : should only add the platform to package.json with --save', function () {
             var pkgJson;
@@ -450,7 +450,7 @@ describe('pkgJson', function () {
                     expect(pkgJsonCordova.platforms.indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
                     expect(pkgJsonCordova.platforms.indexOf(platformNotToAdd)).toEqual(-1);
                 });
-        }, TIMEOUT);
+        });
 
         it('Test#010 : two platforms are added and removed correctly with --save --fetch', function () {
             expect(pkgJsonPath).toExist();
@@ -517,7 +517,7 @@ describe('pkgJson', function () {
                     // Platforms are removed from config.xml.
                     expect(configEngArray.length === 0);
                 }).then(emptyPlatformList); // platform ls should be empty too.;
-        }, TIMEOUT);
+        });
     });
 
     // Test #020 : use basePkgJson15 as pkg.json contains platform/spec and plugin/spec and config.xml does not.
@@ -584,7 +584,6 @@ describe('pkgJson', function () {
                 pkgJson = cordova_util.requireNoCache(pkgJsonPath);
                 expect(semver.satisfies(pluginPkgJsonVersion.version, pkgJson.dependencies['cordova-plugin-splashscreen'])).toEqual(true);
             });
-        // Cordova prepare needs extra wait time to complete.
         }, TIMEOUT * 2);
     });
 
@@ -651,8 +650,7 @@ describe('pkgJson', function () {
                 // Check that version in plugin pkg.json and config version "satisfy" each other.
                 expect(semver.satisfies(pluginPkgJsonVersion.version, configPlugin.spec)).toEqual(true);
             });
-        // Cordova prepare needs extra wait time to complete.
-        }, TIMEOUT);
+        });
     });
 
     // Test #022 : use basePkgJson17 (config.xml and pkg.json each have ios platform with different specs).
@@ -721,8 +719,7 @@ describe('pkgJson', function () {
                 // Check that pkg.json and plugin pkg.json versions "satisfy".
                 expect(semver.satisfies(pluginPkgJsonVersion.version, pkgJson.dependencies['cordova-ios']));
             });
-        // Cordova prepare needs extra wait time to complete.
-        }, TIMEOUT);
+        });
     });
 
     // No pkg.json included in test file.
@@ -753,7 +750,7 @@ describe('pkgJson', function () {
                         }
                     });
                 });
-        }, TIMEOUT);
+        });
 
         // Test#027: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#027 : if you add a plugin with local path, config.xml gets updated', function () {
@@ -774,6 +771,6 @@ describe('pkgJson', function () {
                     var result = includeFunc(configPlugin.spec, pluginPath);
                     expect(result).toEqual(true);
                 });
-        }, TIMEOUT);
+        });
     });
 });
