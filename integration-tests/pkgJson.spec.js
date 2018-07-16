@@ -29,7 +29,7 @@ var semver = require('semver');
 describe('pkgJson', function () {
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
-    var tmpDir, project, results;
+    var tmpDir, project, results, pkgJsonPath;
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
@@ -39,6 +39,7 @@ describe('pkgJson', function () {
     function setup (name) {
         tmpDir = helpers.tmpDir('pkgJson');
         project = path.join(tmpDir, 'project');
+        pkgJsonPath = path.join(project, 'package.json');
 
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
 
@@ -79,7 +80,6 @@ describe('pkgJson', function () {
         });
 
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             var pkgJson = require(pkgJsonPath);
             var cwd = process.cwd();
             var configXmlPath = path.join(cwd, 'config.xml');
@@ -122,7 +122,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#002 : should NOT add a plugin to package.json if --save is not used', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             var pkgJson;
             expect(pkgJsonPath).toExist();
 
@@ -143,7 +142,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#003 : should NOT remove plugin from package.json if there is no --save', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             var pkgJson;
 
             expect(pkgJsonPath).toExist();
@@ -169,7 +167,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#004 : should successfully add and remove a plugin with variables and save to package.json', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             var pkgJson;
             var someKey = 'someKey';
 
@@ -198,7 +195,6 @@ describe('pkgJson', function () {
 
         // CB-12170 : Test is commented out because not promisified correctly in cordova-create script
         xit('Test#005 : should successfully add and remove multiple plugins with save & fetch', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             // Delete any previous caches of require(package.json).
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
 
@@ -238,7 +234,6 @@ describe('pkgJson', function () {
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
             var iosJsonPath = path.join(cwd, 'platforms/ios/ios.json');
             var configXmlPath = path.join(cwd, 'config.xml');
-            var pkgJsonPath = path.join(cwd, 'package.json');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -305,7 +300,6 @@ describe('pkgJson', function () {
             var cwd = process.cwd();
             var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
             var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
-            var pkgJsonPath = path.join(cwd, 'package.json');
             var pkgJson;
             var configXmlPath = path.join(cwd, 'config.xml');
             var cfg = new ConfigParser(configXmlPath);
@@ -378,7 +372,6 @@ describe('pkgJson', function () {
         }
 
         it('Test#006 : platform is added and removed correctly with --save', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             expect(pkgJsonPath).toExist();
             var pkgJson;
 
@@ -404,7 +397,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#007 : should not remove platforms from package.json when removing without --save', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             expect(pkgJsonPath).toExist();
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
 
@@ -429,7 +421,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#008 : should not add platform to package.json when adding without --save', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             expect(pkgJsonPath).toExist();
             // Delete any previous caches of require(package.json).
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
@@ -446,7 +437,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#009 : should only add the platform to package.json with --save', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             var pkgJson;
             var platformNotToAdd = 'browser';
             expect(pkgJsonPath).toExist();
@@ -468,7 +458,6 @@ describe('pkgJson', function () {
         }, TIMEOUT);
 
         it('Test#010 : two platforms are added and removed correctly with --save --fetch', function () {
-            var pkgJsonPath = path.join(process.cwd(), 'package.json');
             expect(pkgJsonPath).toExist();
             var pkgJson;
             // Delete any previous caches of require(package.json).
@@ -551,7 +540,6 @@ describe('pkgJson', function () {
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
             var configXmlPath = path.join(cwd, 'config.xml');
-            var pkgJsonPath = path.join(cwd, 'package.json');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
@@ -622,7 +610,6 @@ describe('pkgJson', function () {
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
             var configXmlPath = path.join(cwd, 'config.xml');
-            var pkgJsonPath = path.join(cwd, 'package.json');
             var cfg = new ConfigParser(configXmlPath);
             var pkgJson;
             var engines = cfg.getEngines();
@@ -692,7 +679,6 @@ describe('pkgJson', function () {
             var cwd = process.cwd();
             var iosDirectory = path.join(cwd, 'platforms/ios/cordova/version');
             var configXmlPath = path.join(cwd, 'config.xml');
-            var pkgJsonPath = path.join(cwd, 'package.json');
             var pkgJson = cordova_util.requireNoCache(pkgJsonPath);
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
