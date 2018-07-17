@@ -711,9 +711,10 @@ describe('pkgJson', function () {
             var pluginPkgJsonVersion;
 
             // Pkg.json does not have platform or spec yet. Config.xml has ios and spec '~4.2.1'.
-            // Remove for testing purposes so platform is not pre-installed.
-            cordova.platform('rm', [iosPlatform], {'save': true});
             return emptyPlatformList().then(function () {
+                // Remove for testing purposes so platform is not pre-installed.
+                cordova.platform('rm', [iosPlatform], {'save': true});
+            }).then(function () {
                 // Add ios with --save and --fetch.
                 return cordova.platform('add', [iosPlatform], {'save': true});
             }).then(function () {
