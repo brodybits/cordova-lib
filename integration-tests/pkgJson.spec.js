@@ -264,9 +264,14 @@ describe('pkgJson', function () {
 
         // Test#025: has a pkg.json. Checks if local path is added to pkg.json for platform and plugin add.
         it('Test#025 : if you add a platform/plugin with local path, pkg.json gets updated', function () {
+            // Copy fixtures to temp dir to avoid modifiying them as they get installed as symlinks
+            const platformFixturePath = path.join(fixturesPath, 'platforms/cordova-browser');
+            const platformPath = path.join(tmpDir, 'cordova-browser');
+            fs.copySync(platformFixturePath, platformPath);
+            const pluginFixturePath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
+            const pluginPath = path.join(tmpDir, 'cordova-lib-test-plugin');
+            fs.copySync(pluginFixturePath, pluginPath);
 
-            var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
-            var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
@@ -658,11 +663,15 @@ describe('pkgJson', function () {
 
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#026 : if you add a platform with local path, config.xml gets updated', function () {
+            // Copy fixtures to temp dir to avoid modifiying them as they get installed as symlinks
+            const platformFixturePath = path.join(fixturesPath, 'platforms/cordova-browser');
+            const platformPath = path.join(tmpDir, 'cordova-browser');
+            fs.copySync(platformFixturePath, platformPath);
+
             var cfg = new ConfigParser(configXmlPath);
             var engines = cfg.getEngines();
             var engNames; // eslint-disable-line no-unused-vars
             var engSpec; // eslint-disable-line no-unused-vars
-            var platformPath = path.join(fixturesPath, 'platforms/cordova-browser');
 
             // Run cordova platform add local path --save --fetch.
             return cordova.platform('add', platformPath, {'save': true})
@@ -684,7 +693,11 @@ describe('pkgJson', function () {
 
         // Test#027: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#027 : if you add a plugin with local path, config.xml gets updated', function () {
-            var pluginPath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
+            // Copy fixtures to temp dir to avoid modifiying them as they get installed as symlinks
+            const pluginFixturePath = path.join(fixturesPath, 'plugins/cordova-lib-test-plugin');
+            const pluginPath = path.join(tmpDir, 'cordova-lib-test-plugin');
+            fs.copySync(pluginFixturePath, pluginPath);
+
             var cfg = new ConfigParser(configXmlPath);
             var configPlugins = cfg.getPluginIdList();
             var configPlugin = cfg.getPlugin(configPlugins);
