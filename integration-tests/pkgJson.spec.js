@@ -28,9 +28,7 @@ var semver = require('semver');
 
 describe('pkgJson', function () {
 
-    var tmpDir = helpers.tmpDir('pkgJson');
-    var project = path.join(tmpDir, 'project');
-    var results;
+    var tmpDir, project, results;
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
@@ -38,6 +36,9 @@ describe('pkgJson', function () {
     });
 
     function setup (name) {
+        tmpDir = helpers.tmpDir('pkgJson');
+        project = path.join(tmpDir, 'project');
+
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
 
         fs.copySync(path.join(__dirname, '../spec/cordova/fixtures', name), project);
@@ -63,8 +64,9 @@ describe('pkgJson', function () {
         beforeEach(function () {
             setup('basePkgJson');
             // Copy some platform to avoid working on a project with no platforms.
-            // FIXME Use a fixture that is properly promisified. This one causes spurious test failures
-            // shell.cp('-R', path.join(__dirname, '../spec/plugman/projects', helpers.testPlatform), path.join(project, 'platforms'));
+            // FIXME Use a fixture that is properly promisified. This one
+            // causes spurious test failures when tests reuse the project path.
+            fs.copySync(path.join(__dirname, '../spec/plugman/projects', helpers.testPlatform), path.join(project, 'platforms', helpers.testPlatform));
         });
 
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
