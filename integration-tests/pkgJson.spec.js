@@ -34,6 +34,7 @@ describe('pkgJson', function () {
     helpers.setDefaultTimeout(TIMEOUT);
 
     afterEach(function () {
+        events.removeAllListeners('results');
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
         fs.removeSync(tmpDir);
     });
