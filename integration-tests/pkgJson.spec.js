@@ -56,7 +56,8 @@ describe('pkgJson', function () {
             shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', 'basePkgJson'), tmpDir);
             shell.mv(path.join(tmpDir, 'basePkgJson'), project);
             // Copy some platform to avoid working on a project with no platforms.
-            shell.cp('-R', path.join(__dirname, '..', 'spec', 'plugman', 'projects', helpers.testPlatform), path.join(project, 'platforms'));
+            // FIXME Use a fixture that is properly promisified. This one causes spurious test failures
+            // shell.cp('-R', path.join(__dirname, '../spec/plugman/projects', helpers.testPlatform), path.join(project, 'platforms'));
             process.chdir(project);
             delete process.env.PWD;
         });
