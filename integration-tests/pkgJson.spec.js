@@ -18,7 +18,7 @@
 */
 var helpers = require('../spec/helpers');
 var path = require('path');
-var shell = require('shelljs');
+var fs = require('fs-extra');
 var events = require('cordova-common').events;
 var ConfigParser = require('cordova-common').ConfigParser;
 var cordova = require('../src/cordova/cordova');
@@ -34,17 +34,13 @@ describe('pkgJson', function () {
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        shell.rm('-rf', tmpDir);
+        fs.removeSync(tmpDir);
     });
 
     function setup (name) {
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 150 * 1000;
-        shell.rm('-rf', tmpDir);
 
-        // Copy then move because we need to copy everything, but that means it will copy the whole directory.
-        // Using /* doesn't work because of hidden files.
-        shell.cp('-R', path.join(__dirname, '..', 'spec', 'cordova', 'fixtures', name), tmpDir);
-        shell.mv(path.join(tmpDir, name), project);
+        fs.copySync(path.join(__dirname, '../spec/cordova/fixtures', name), project);
         process.chdir(project);
         delete process.env.PWD;
         events.on('results', function (res) { results = res; });
