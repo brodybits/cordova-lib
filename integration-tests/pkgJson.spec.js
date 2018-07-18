@@ -180,8 +180,7 @@ describe('pkgJson', function () {
                 });
         });
 
-        // CB-12170 : Test is commented out because not promisified correctly in cordova-create script
-        xit('Test#005 : should successfully add and remove multiple plugins with save & fetch', function () {
+        it('Test#005 : should successfully add and remove multiple plugins with save & fetch', function () {
             expect(pkgJsonPath).toExist();
 
             // Add the plugin with --save.
