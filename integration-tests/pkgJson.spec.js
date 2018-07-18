@@ -50,7 +50,7 @@ describe('pkgJson', function () {
 
     // Factoring out some repeated checks.
     function emptyPlatformList () {
-        expect(installedPlatforms()).not.toContain(helpers.testPlatform);
+        expect(installedPlatforms()).toEqual([]);
         return Promise.resolve();
     }
 
