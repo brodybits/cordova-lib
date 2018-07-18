@@ -19,7 +19,6 @@
 var helpers = require('../spec/helpers');
 var path = require('path');
 var fs = require('fs-extra');
-var events = require('cordova-common').events;
 var ConfigParser = require('cordova-common').ConfigParser;
 var cordova = require('../src/cordova/cordova');
 var cordova_util = require('../src/cordova/util');
@@ -28,13 +27,12 @@ var semver = require('semver');
 describe('pkgJson', function () {
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
-    var tmpDir, project, results, pkgJsonPath, configXmlPath;
+    var tmpDir, project, pkgJsonPath, configXmlPath;
 
     const TIMEOUT = 150 * 1000;
     helpers.setDefaultTimeout(TIMEOUT);
 
     afterEach(function () {
-        events.removeAllListeners('results');
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
         fs.removeSync(tmpDir);
     });
@@ -48,16 +46,17 @@ describe('pkgJson', function () {
         fs.copySync(path.join(fixturesPath, name), project);
         process.chdir(project);
         delete process.env.PWD;
-        events.on('results', function (res) { results = res; });
     }
 
     // Factoring out some repeated checks.
     function emptyPlatformList () {
-        return cordova.platform('list').then(function () {
-            var installed = results.match(/Installed platforms:\n {2}(.*)/);
-            expect(installed).toBeDefined();
-            expect(installed[1].indexOf(helpers.testPlatform)).toBe(-1);
-        });
+        expect(installedPlatforms()).not.toContain(helpers.testPlatform);
+        return Promise.resolve();
+    }
+
+    function installedPlatforms () {
+        // Sort platform list to allow for easy pseudo set equality
+        return cordova_util.listPlatforms(project).sort();
     }
 
     function getPkgJson (propPath) {
@@ -290,11 +289,8 @@ describe('pkgJson', function () {
         beforeEach(() => setup('basePkgJson'));
 
         function fullPlatformList () {
-            return cordova.platform('list').then(function () {
-                var installed = results.match(/Installed platforms:\n {2}(.*)/);
-                expect(installed).toBeDefined();
-                expect(installed[1].indexOf(helpers.testPlatform)).toBeGreaterThan(-1);
-            });
+            expect(installedPlatforms()).toContain(helpers.testPlatform);
+            return Promise.resolve();
         }
 
         it('Test#006 : platform is added and removed correctly with --save', function () {
