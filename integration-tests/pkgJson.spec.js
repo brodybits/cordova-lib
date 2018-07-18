@@ -55,6 +55,18 @@ describe('pkgJson', function () {
         return listPlatforms(project).sort();
     }
 
+    function platformVersion (platformName) {
+        const p = path.join(project, 'platforms', platformName, 'cordova/version');
+        expect(p).toExist();
+        return requireNoCache(p).version;
+    }
+
+    function pluginVersion (pluginName) {
+        const p = path.join(project, 'plugins', pluginName, 'package.json');
+        expect(p).toExist();
+        return requireNoCache(p).version;
+    }
+
     function getPkgJson (propPath) {
         expect(pkgJsonPath).toExist();
         const keys = propPath ? propPath.split('.') : [];
@@ -204,9 +216,7 @@ describe('pkgJson', function () {
         // and --save --fetch is called, use the pinned version or plugin pkg.json version.
         it('Test#023 : use pinned/lastest version if there is no platform/plugin version passed in and no platform/plugin versions in pkg.json or config.xml', function () {
             var iosPlatform = 'ios';
-            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
             var iosJsonPath = path.join(project, 'platforms/ios/ios.json');
-            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-geolocation/package.json');
 
             // Pkg.json has no platform or plugin or specs.
             expect(getPkgJson('cordova')).toBeUndefined();
@@ -221,10 +231,10 @@ describe('pkgJson', function () {
                     expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
 
                     // Config.xml and ios/cordova/version check.
-                    const { version } = requireNoCache(iosDirectory);
-                    expect(getCfg().getEngines()).toEqual([
-                        {name: 'ios', spec: specSatisfiedBy(version)}
-                    ]);
+                    expect(getCfg().getEngines()).toEqual([{
+                        name: 'ios',
+                        spec: specSatisfiedBy(platformVersion('ios'))
+                    }]);
                 }).then(function () {
                     // Add geolocation plugin with --save --fetch.
                     return cordova.plugin('add', 'cordova-plugin-geolocation', {save: true});
@@ -232,7 +242,7 @@ describe('pkgJson', function () {
                     var iosJson = requireNoCache(iosJsonPath);
                     expect(iosJson.installed_plugins['cordova-plugin-geolocation']).toBeDefined();
                     // Check config.xml for plugins and spec.
-                    const { version } = requireNoCache(pluginPkgJsonDir);
+                    const version = pluginVersion('cordova-plugin-geolocation');
                     const cfgSpec = getCfg().getPlugin('cordova-plugin-geolocation').spec;
                     const pkgSpec = getPkgJson('dependencies.cordova-plugin-geolocation');
                     // Check that installed version satisfies the dependency spec
@@ -396,8 +406,6 @@ describe('pkgJson', function () {
         */
         it('Test#020 : During add, if pkg.json has a spec, use that one.', function () {
             var iosPlatform = 'ios';
-            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
-            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
 
             // Pkg.json has ios and spec '^4.2.1' and splashscreen '^3.2.2'.
             expect(getPkgJson('cordova.platforms')).toEqual([ iosPlatform ]);
@@ -418,7 +426,7 @@ describe('pkgJson', function () {
                 // No change to pkg.json platforms or spec for ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = requireNoCache(iosDirectory);
+                const version = platformVersion('ios');
                 expect(getCfg().getEngines()).toEqual([
                     {name: 'ios', spec: specSatisfiedBy(version)}
                 ]);
@@ -429,7 +437,7 @@ describe('pkgJson', function () {
                 return cordova.plugin('add', 'cordova-plugin-splashscreen', {save: true});
             }).then(function () {
                 // Check that installed version satisfies the dependency spec
-                const { version } = requireNoCache(pluginPkgJsonDir);
+                const version = pluginVersion('cordova-plugin-splashscreen');
                 const pkgSpec = getPkgJson('dependencies.cordova-plugin-splashscreen');
                 expect(semver.satisfies(version, pkgSpec)).toBe(true);
             });
@@ -445,8 +453,6 @@ describe('pkgJson', function () {
         */
         it('Test#021 : If config.xml has a spec (and none was specified and pkg.json does not have one), use config.', function () {
             var iosPlatform = 'ios';
-            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
-            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
 
             // Pkg.json does not have platform or spec yet. Config.xml has ios and spec '~4.2.1'.
             expect(installedPlatforms()).toEqual([]);
@@ -459,16 +465,16 @@ describe('pkgJson', function () {
                 // pkg.json has new platform.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = requireNoCache(iosDirectory);
-                expect(getCfg().getEngines()).toEqual([
-                    {name: 'ios', spec: specSatisfiedBy(version)}
-                ]);
+                expect(getCfg().getEngines()).toEqual([{
+                    name: 'ios',
+                    spec: specSatisfiedBy(platformVersion('ios'))
+                }]);
             }).then(function () {
                 // Add splashscreen with --save --fetch.
                 return cordova.plugin('add', 'cordova-plugin-splashscreen', {save: true});
             }).then(function () {
                 // Splashscreen plugin and spec added.
-                const { version } = requireNoCache(pluginPkgJsonDir);
+                const version = pluginVersion('cordova-plugin-splashscreen');
                 expect(getCfg().getPlugins()).toEqual([{
                     name: 'cordova-plugin-splashscreen',
                     spec: specSatisfiedBy(version),
@@ -487,8 +493,6 @@ describe('pkgJson', function () {
         */
         it('Test#022 : when adding with a specific platform version, always use that one.', function () {
             var iosPlatform = 'ios';
-            var iosDirectory = path.join(project, 'platforms/ios/cordova/version');
-            var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
 
             // Pkg.json has ios and spec '^4.2.1'.
             expect(getPkgJson('cordova.platforms')).toEqual([ iosPlatform ]);
@@ -508,16 +512,16 @@ describe('pkgJson', function () {
                 // Pkg.json has ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = requireNoCache(iosDirectory);
-                expect(getCfg().getEngines()).toEqual([
-                    {name: 'ios', spec: specSatisfiedBy(version)}
-                ]);
+                expect(getCfg().getEngines()).toEqual([{
+                    name: 'ios',
+                    spec: specSatisfiedBy(platformVersion('ios'))
+                }]);
             }).then(function () {
                 // Add splashscreen with --save --fetch.
                 return cordova.plugin('add', 'cordova-plugin-splashscreen@4.0.0', {save: true});
             }).then(function () {
                 // Check config.xml for plugins and spec.
-                const { version } = requireNoCache(pluginPkgJsonDir);
+                const version = pluginVersion('cordova-plugin-splashscreen');
                 const cfgSpec = getCfg().getPlugin('cordova-plugin-splashscreen').spec;
                 const pkgSpec = getPkgJson('dependencies.cordova-plugin-splashscreen');
                 // Check that installed version satisfies the dependency spec
