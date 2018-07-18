@@ -49,11 +49,6 @@ describe('pkgJson', function () {
     }
 
     // Factoring out some repeated checks.
-    function emptyPlatformList () {
-        expect(installedPlatforms()).toEqual([]);
-        return Promise.resolve();
-    }
-
     function installedPlatforms () {
         // Sort platform list to allow for easy pseudo set equality
         return cordova_util.listPlatforms(project).sort();
@@ -295,12 +290,10 @@ describe('pkgJson', function () {
 
         it('Test#006 : platform is added and removed correctly with --save', function () {
             expect(pkgJsonPath).toExist();
+            expect(installedPlatforms()).toEqual([]);
 
-            // Check there are no platforms yet.
-            return emptyPlatformList().then(function () {
-                // Add the testing platform with --save.
-                return cordova.platform('add', helpers.testPlatform, {save: true});
-            }).then(function () {
+            // Add the testing platform with --save.
+            return cordova.platform('add', helpers.testPlatform, {save: true}).then(function () {
                 // Check the platform add was successful.
                 expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
             }).then(function () {
@@ -316,11 +309,10 @@ describe('pkgJson', function () {
 
         it('Test#007 : should not remove platforms from package.json when removing without --save', function () {
             expect(pkgJsonPath).toExist();
+            expect(installedPlatforms()).toEqual([]);
 
-            return emptyPlatformList().then(function () {
-                // Add the testing platform with --save.
-                return cordova.platform('add', helpers.testPlatform, {save: true});
-            }).then(function () {
+            // Add the testing platform with --save.
+            return cordova.platform('add', helpers.testPlatform, {save: true}).then(function () {
                 // Check the platform add was successful.
                 expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
             }).then(function () {
@@ -329,10 +321,10 @@ describe('pkgJson', function () {
                 // And now remove it without --save.
                 return cordova.platform('rm', helpers.testPlatform);
             }).then(function () {
-                // Check that the platform removed without --save is still in platforms key.
+                // Check that the removed platform is still in cordova.platforms...
                 expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
-            }).then(function () {
-                return emptyPlatformList();
+                // ... but is not actually installed any longer
+                expect(installedPlatforms()).toEqual([]);
             });
         });
 
@@ -367,15 +359,13 @@ describe('pkgJson', function () {
         });
 
         it('Test#010 : two platforms are added and removed correctly with --save --fetch', function () {
-            // No platforms in config or pkg.json yet.
+            // No platforms installed nor saved in config or pkg.json yet.
             expect(getPkgJson('cordova')).toBeUndefined();
             expect(getCfg().getEngines()).toEqual([]);
+            expect(installedPlatforms()).toEqual([]);
 
-            // Check there are no platforms yet.
-            return emptyPlatformList().then(function () {
-                // Add the testing platform with --save and add specific version to android platform.
-                return cordova.platform('add', ['android@7.0.0', 'browser@5.0.1'], {save: true});
-            }).then(function () {
+            // Add the testing platform with --save and add specific version to android platform.
+            return cordova.platform('add', ['android@7.0.0', 'browser@5.0.1'], {save: true}).then(function () {
                 // Check the platform add was successful in platforms list and
                 // dependencies should have specific version from add.
                 expect(getPkgJson('cordova.platforms')).toEqual(['android', 'browser']);
@@ -395,13 +385,11 @@ describe('pkgJson', function () {
                 // And now remove it with --save.
                 return cordova.platform('rm', ['android', 'browser'], {save: true});
             }).then(function () {
-                // Expect platforms to be removed frpm package.json
+                // Expect platforms to be uninstalled & removed from config files
                 expect(getPkgJson('cordova.platforms')).toEqual([]);
                 expect(getPkgJson('dependencies')).toEqual({});
-                // Platforms are removed from config.xml.
                 expect(getCfg().getEngines()).toEqual([]);
-            }).then(function () {
-                return emptyPlatformList();
+                expect(installedPlatforms()).toEqual([]);
             });
         });
     });
@@ -430,11 +418,10 @@ describe('pkgJson', function () {
                 expect(cfg.getEngines()).toEqual([]);
                 expect(cfg.getPluginIdList()).toEqual([]);
             }
+            expect(installedPlatforms()).toEqual([]);
 
-            return emptyPlatformList().then(function () {
-                // Add ios with --save and --fetch.
-                return cordova.platform('add', iosPlatform, {save: true});
-            }).then(function () {
+            // Add ios with --save and --fetch.
+            return cordova.platform('add', iosPlatform, {save: true}).then(function () {
                 // No change to pkg.json platforms or spec for ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
@@ -469,10 +456,10 @@ describe('pkgJson', function () {
             var pluginPkgJsonDir = path.join(project, 'plugins/cordova-plugin-splashscreen/package.json');
 
             // Pkg.json does not have platform or spec yet. Config.xml has ios and spec '~4.2.1'.
-            return emptyPlatformList().then(function () {
-                // Remove for testing purposes so platform is not pre-installed.
-                cordova.platform('rm', iosPlatform, {save: true});
-            }).then(function () {
+            expect(installedPlatforms()).toEqual([]);
+
+            // Remove for testing purposes so platform is not pre-installed.
+            cordova.platform('rm', iosPlatform, {save: true}).then(function () {
                 // Add ios with --save and --fetch.
                 return cordova.platform('add', iosPlatform, {save: true});
             }).then(function () {
@@ -521,10 +508,10 @@ describe('pkgJson', function () {
                 { name: 'ios', spec: '~4.2.1' }
             ]);
 
-            return emptyPlatformList().then(function () {
-                // Add ios with --save and --fetch.
-                return cordova.platform('add', 'ios@4.5.4', {save: true});
-            }).then(function () {
+            expect(installedPlatforms()).toEqual([]);
+
+            // Add ios with --save and --fetch.
+            return cordova.platform('add', 'ios@4.5.4', {save: true}).then(function () {
                 // Pkg.json has ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
