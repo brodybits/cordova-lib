@@ -16,13 +16,14 @@
     specific language governing permissions and limitations
     under the License.
 */
-var helpers = require('../spec/helpers');
-var path = require('path');
-var fs = require('fs-extra');
-var ConfigParser = require('cordova-common').ConfigParser;
-var cordova = require('../src/cordova/cordova');
-var cordova_util = require('../src/cordova/util');
-var semver = require('semver');
+
+const path = require('path');
+const fs = require('fs-extra');
+const semver = require('semver');
+const { ConfigParser } = require('cordova-common');
+const { listPlatforms, requireNoCache } = require('../src/cordova/util');
+const { tmpDir: getTmpDir, testPlatform, setDefaultTimeout } = require('../spec/helpers');
+const cordova = require('../src/cordova/cordova');
 
 describe('pkgJson', function () {
 
@@ -30,7 +31,7 @@ describe('pkgJson', function () {
     var tmpDir, project, pkgJsonPath, configXmlPath;
 
     const TIMEOUT = 150 * 1000;
-    helpers.setDefaultTimeout(TIMEOUT);
+    setDefaultTimeout(TIMEOUT);
 
     afterEach(function () {
         process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
@@ -38,7 +39,7 @@ describe('pkgJson', function () {
     });
 
     function setup (name) {
-        tmpDir = helpers.tmpDir('pkgJson');
+        tmpDir = getTmpDir('pkgJson');
         project = path.join(tmpDir, 'project');
         pkgJsonPath = path.join(project, 'package.json');
         configXmlPath = path.join(project, 'config.xml');
@@ -51,7 +52,7 @@ describe('pkgJson', function () {
     // Factoring out some repeated checks.
     function installedPlatforms () {
         // Sort platform list to allow for easy pseudo set equality
-        return cordova_util.listPlatforms(project).sort();
+        return listPlatforms(project).sort();
     }
 
     function getPkgJson (propPath) {
@@ -60,7 +61,7 @@ describe('pkgJson', function () {
         return keys.reduce((obj, key) => {
             expect(obj).toBeDefined();
             return obj[key];
-        }, cordova_util.requireNoCache(pkgJsonPath));
+        }, requireNoCache(pkgJsonPath));
     }
 
     function getCfg () {
@@ -91,7 +92,7 @@ describe('pkgJson', function () {
             // Copy some platform to avoid working on a project with no platforms.
             // FIXME Use a fixture that is properly promisified. This one
             // causes spurious test failures when tests reuse the project path.
-            fs.copySync(path.join(__dirname, '../spec/plugman/projects', helpers.testPlatform), path.join(project, 'platforms', helpers.testPlatform));
+            fs.copySync(path.join(__dirname, '../spec/plugman/projects', testPlatform), path.join(project, 'platforms', testPlatform));
         });
 
         it('Test#001 : should successfully add and remove a plugin with save and correct spec', function () {
@@ -220,7 +221,7 @@ describe('pkgJson', function () {
                     expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
 
                     // Config.xml and ios/cordova/version check.
-                    const { version } = cordova_util.requireNoCache(iosDirectory);
+                    const { version } = requireNoCache(iosDirectory);
                     expect(getCfg().getEngines()).toEqual([
                         {name: 'ios', spec: specSatisfiedBy(version)}
                     ]);
@@ -228,10 +229,10 @@ describe('pkgJson', function () {
                     // Add geolocation plugin with --save --fetch.
                     return cordova.plugin('add', 'cordova-plugin-geolocation', {save: true});
                 }).then(function () {
-                    var iosJson = cordova_util.requireNoCache(iosJsonPath);
+                    var iosJson = requireNoCache(iosJsonPath);
                     expect(iosJson.installed_plugins['cordova-plugin-geolocation']).toBeDefined();
                     // Check config.xml for plugins and spec.
-                    const { version } = cordova_util.requireNoCache(pluginPkgJsonDir);
+                    const { version } = requireNoCache(pluginPkgJsonDir);
                     const cfgSpec = getCfg().getPlugin('cordova-plugin-geolocation').spec;
                     const pkgSpec = getPkgJson('dependencies.cordova-plugin-geolocation');
                     // Check that installed version satisfies the dependency spec
@@ -288,13 +289,13 @@ describe('pkgJson', function () {
             expect(installedPlatforms()).toEqual([]);
 
             // Add the testing platform with --save.
-            return cordova.platform('add', helpers.testPlatform, {save: true}).then(function () {
+            return cordova.platform('add', testPlatform, {save: true}).then(function () {
                 // Check the platform add was successful.
-                expect(installedPlatforms()).toEqual([helpers.testPlatform]);
-                expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
+                expect(installedPlatforms()).toEqual([testPlatform]);
+                expect(getPkgJson('cordova.platforms')).toEqual([testPlatform]);
             }).then(function () {
                 // And now remove it with --save.
-                return cordova.platform('rm', helpers.testPlatform, {save: true});
+                return cordova.platform('rm', testPlatform, {save: true});
             }).then(function () {
                 // Checking that the platform removed is in not in the platforms key.
                 expect(getPkgJson('cordova.platforms')).toEqual([]);
@@ -306,16 +307,16 @@ describe('pkgJson', function () {
             expect(installedPlatforms()).toEqual([]);
 
             // Add the testing platform with --save.
-            return cordova.platform('add', helpers.testPlatform, {save: true}).then(function () {
+            return cordova.platform('add', testPlatform, {save: true}).then(function () {
                 // Check the platform add was successful.
-                expect(installedPlatforms()).toEqual([helpers.testPlatform]);
-                expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
+                expect(installedPlatforms()).toEqual([testPlatform]);
+                expect(getPkgJson('cordova.platforms')).toEqual([testPlatform]);
             }).then(function () {
                 // And now remove it without --save.
-                return cordova.platform('rm', helpers.testPlatform);
+                return cordova.platform('rm', testPlatform);
             }).then(function () {
                 // Check that the removed platform is still in cordova.platforms...
-                expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
+                expect(getPkgJson('cordova.platforms')).toEqual([testPlatform]);
                 // ... but is not actually installed any longer
                 expect(installedPlatforms()).toEqual([]);
             });
@@ -323,14 +324,14 @@ describe('pkgJson', function () {
 
         it('Test#008 : should not add platform to package.json when adding without --save', function () {
             expect(pkgJsonPath).toExist();
-            // Pkg.json "platforms" should be empty and helpers.testPlatform should not exist in pkg.json.
+            // Pkg.json "platforms" should be empty and testPlatform should not exist in pkg.json.
             expect(getPkgJson('cordova')).toBeUndefined();
 
             // Add platform without --save.
-            return cordova.platform('add', helpers.testPlatform)
+            return cordova.platform('add', testPlatform)
                 .then(function () {
                     // Test platform should have been installed but not added to pkg.json
-                    expect(installedPlatforms()).toEqual([helpers.testPlatform]);
+                    expect(installedPlatforms()).toEqual([testPlatform]);
                     expect(getPkgJson('cordova')).toBeUndefined();
                 });
         });
@@ -343,10 +344,10 @@ describe('pkgJson', function () {
             return cordova.platform('add', platformNotToAdd)
                 .then(function () {
                     // And now add another platform with --save.
-                    return cordova.platform('add', helpers.testPlatform, {save: true});
+                    return cordova.platform('add', testPlatform, {save: true});
                 }).then(function () {
                     // Check that only the platform added with --save was added to package.json.
-                    expect(getPkgJson('cordova.platforms')).toEqual([helpers.testPlatform]);
+                    expect(getPkgJson('cordova.platforms')).toEqual([testPlatform]);
                 });
         });
 
@@ -417,7 +418,7 @@ describe('pkgJson', function () {
                 // No change to pkg.json platforms or spec for ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = cordova_util.requireNoCache(iosDirectory);
+                const { version } = requireNoCache(iosDirectory);
                 expect(getCfg().getEngines()).toEqual([
                     {name: 'ios', spec: specSatisfiedBy(version)}
                 ]);
@@ -428,7 +429,7 @@ describe('pkgJson', function () {
                 return cordova.plugin('add', 'cordova-plugin-splashscreen', {save: true});
             }).then(function () {
                 // Check that installed version satisfies the dependency spec
-                const { version } = cordova_util.requireNoCache(pluginPkgJsonDir);
+                const { version } = requireNoCache(pluginPkgJsonDir);
                 const pkgSpec = getPkgJson('dependencies.cordova-plugin-splashscreen');
                 expect(semver.satisfies(version, pkgSpec)).toBe(true);
             });
@@ -458,7 +459,7 @@ describe('pkgJson', function () {
                 // pkg.json has new platform.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = cordova_util.requireNoCache(iosDirectory);
+                const { version } = requireNoCache(iosDirectory);
                 expect(getCfg().getEngines()).toEqual([
                     {name: 'ios', spec: specSatisfiedBy(version)}
                 ]);
@@ -467,7 +468,7 @@ describe('pkgJson', function () {
                 return cordova.plugin('add', 'cordova-plugin-splashscreen', {save: true});
             }).then(function () {
                 // Splashscreen plugin and spec added.
-                const { version } = cordova_util.requireNoCache(pluginPkgJsonDir);
+                const { version } = requireNoCache(pluginPkgJsonDir);
                 expect(getCfg().getPlugins()).toEqual([{
                     name: 'cordova-plugin-splashscreen',
                     spec: specSatisfiedBy(version),
@@ -507,7 +508,7 @@ describe('pkgJson', function () {
                 // Pkg.json has ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([iosPlatform]);
                 // Config.xml and ios/cordova/version check.
-                const { version } = cordova_util.requireNoCache(iosDirectory);
+                const { version } = requireNoCache(iosDirectory);
                 expect(getCfg().getEngines()).toEqual([
                     {name: 'ios', spec: specSatisfiedBy(version)}
                 ]);
@@ -516,7 +517,7 @@ describe('pkgJson', function () {
                 return cordova.plugin('add', 'cordova-plugin-splashscreen@4.0.0', {save: true});
             }).then(function () {
                 // Check config.xml for plugins and spec.
-                const { version } = cordova_util.requireNoCache(pluginPkgJsonDir);
+                const { version } = requireNoCache(pluginPkgJsonDir);
                 const cfgSpec = getCfg().getPlugin('cordova-plugin-splashscreen').spec;
                 const pkgSpec = getPkgJson('dependencies.cordova-plugin-splashscreen');
                 // Check that installed version satisfies the dependency spec
