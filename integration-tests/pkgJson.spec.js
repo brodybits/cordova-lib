@@ -95,6 +95,19 @@ describe('pkgJson', function () {
         };
     }
 
+    const customMatchers = {
+        toSatisfy: () => ({ compare (version, spec) {
+            const pass = semver.satisfies(version, spec);
+            const expectation = (pass ? 'not ' : '') + 'to satisfy';
+            return {
+                pass, message: `expected ${version} ${expectation} ${spec}`
+            };
+        }})
+    };
+
+    // Add our custom matchers
+    beforeEach(() => jasmine.addMatchers(customMatchers));
+
     // This group of tests checks if plugins are added and removed as expected from package.json.
     describe('plugin end-to-end', function () {
         const pluginId = 'cordova-plugin-device';
@@ -245,11 +258,9 @@ describe('pkgJson', function () {
                     expect(iosJson.installed_plugins[PLUGIN]).toBeDefined();
                     // Check config.xml for plugins and spec.
                     const version = pluginVersion(PLUGIN);
-                    const cfgSpec = getCfg().getPlugin(PLUGIN).spec;
-                    const pkgSpec = getPkgJson(`dependencies.${PLUGIN}`);
                     // Check that installed version satisfies the dependency spec
-                    expect(semver.satisfies(version, cfgSpec)).toBe(true);
-                    expect(semver.satisfies(version, pkgSpec)).toBe(true);
+                    expect(version).toSatisfy(getCfg().getPlugin(PLUGIN).spec);
+                    expect(version).toSatisfy(getPkgJson(`dependencies.${PLUGIN}`));
                 });
         });
 
@@ -438,15 +449,13 @@ describe('pkgJson', function () {
                 ]);
                 // Check that pkg.json and ios/cordova/version versions "satisfy" each other.
                 const pkgSpec = getPkgJson(`dependencies.cordova-${PLATFORM}`);
-                expect(semver.satisfies(version, pkgSpec)).toBe(true);
+                expect(version).toSatisfy(pkgSpec);
             }).then(function () {
                 // Add splashscreen plugin with --save --fetch.
                 return cordova.plugin('add', PLUGIN, {save: true});
             }).then(function () {
                 // Check that installed version satisfies the dependency spec
-                const version = pluginVersion(PLUGIN);
-                const pkgSpec = getPkgJson(`dependencies.${PLUGIN}`);
-                expect(semver.satisfies(version, pkgSpec)).toBe(true);
+                expect(pluginVersion(PLUGIN)).toSatisfy(getPkgJson(`dependencies.${PLUGIN}`));
             });
         }, TIMEOUT * 2);
     });
@@ -528,13 +537,10 @@ describe('pkgJson', function () {
                 // Add splashscreen with --save --fetch.
                 return cordova.plugin('add', `${PLUGIN}@4.0.0`, {save: true});
             }).then(function () {
-                // Check config.xml for plugins and spec.
-                const version = pluginVersion(PLUGIN);
-                const cfgSpec = getCfg().getPlugin(PLUGIN).spec;
-                const pkgSpec = getPkgJson(`dependencies.${PLUGIN}`);
                 // Check that installed version satisfies the dependency spec
-                expect(semver.satisfies(version, cfgSpec)).toBe(true);
-                expect(semver.satisfies(version, pkgSpec)).toBe(true);
+                const version = pluginVersion(PLUGIN);
+                expect(version).toSatisfy(getCfg().getPlugin(PLUGIN).spec);
+                expect(version).toSatisfy(getPkgJson(`dependencies.${PLUGIN}`));
             });
         });
     });
