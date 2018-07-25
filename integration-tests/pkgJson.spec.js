@@ -134,7 +134,7 @@ describe('pkgJson', function () {
             expect(getPkgJson('cordova')).toBeUndefined();
 
             // Add the plugin with --save.
-            return cordova.plugin('add', pluginId + '@1.1.2', {save: true})
+            return cordova.plugin('add', `${pluginId}@1.1.2`, {save: true})
                 .then(function () {
                     // Check that the plugin and spec add was successful to pkg.json.
                     expect(getPkgJson('cordova.plugins')[pluginId]).toBeDefined();
@@ -239,18 +239,17 @@ describe('pkgJson', function () {
         it('Test#023 : use pinned/lastest version if there is no platform/plugin version passed in and no platform/plugin versions in pkg.json or config.xml', function () {
             const PLATFORM = 'ios';
             const PLUGIN = 'cordova-plugin-geolocation';
-            const iosJsonPath = path.join(project, 'platforms/ios/ios.json');
 
             // Pkg.json has no platform or plugin or specs.
             expect(getPkgJson('cordova')).toBeUndefined();
             expect(getPkgJson('dependencies')).toBeUndefined();
+
             // Config.xml has no platform or plugin or specs.
             expect(getCfg().getEngines()).toEqual([]);
+            expect(getCfg().getPluginIdList()).toEqual([]);
 
-            // Add ios without version.
             return cordova.platform('add', PLATFORM, {save: true})
                 .then(function () {
-                    // Pkg.json has ios.
                     expect(getPkgJson('cordova.platforms')).toEqual([PLATFORM]);
 
                     // Config.xml and ios/cordova/version check.
@@ -259,14 +258,13 @@ describe('pkgJson', function () {
                         spec: specSatisfiedBy(platformVersion(PLATFORM))
                     }]);
                 }).then(function () {
-                    // Add geolocation plugin with --save --fetch.
                     return cordova.plugin('add', PLUGIN, {save: true});
                 }).then(function () {
-                    const iosJson = requireNoCache(iosJsonPath);
+                    const iosJson = requireNoCache(path.join(project, 'platforms/ios/ios.json'));
                     expect(iosJson.installed_plugins[PLUGIN]).toBeDefined();
-                    // Check config.xml for plugins and spec.
-                    const version = pluginVersion(PLUGIN);
+
                     // Check that installed version satisfies the dependency spec
+                    const version = pluginVersion(PLUGIN);
                     expect(version).toSatisfy(getCfg().getPlugin(PLUGIN).spec);
                     expect(version).toSatisfy(getPkgJson(`dependencies.${PLUGIN}`));
                 });
@@ -280,10 +278,9 @@ describe('pkgJson', function () {
             const platformPath = copyFixture(`platforms/cordova-${PLATFORM}`);
             const pluginPath = copyFixture(path.join('plugins', PLUGIN));
 
-            // Run cordova platform add local path --save --fetch.
             return cordova.platform('add', platformPath, {save: true})
                 .then(function () {
-                    // Pkg.json has browser.
+                    // Pkg.json has platform
                     expect(getPkgJson('cordova.platforms')).toEqual([PLATFORM]);
                     expect(getPkgJson(`dependencies.cordova-${PLATFORM}`)).toBeDefined();
 
@@ -352,8 +349,6 @@ describe('pkgJson', function () {
         });
 
         it('Test#008 : should not add platform to package.json when adding without --save', function () {
-            expect(pkgJsonPath).toExist();
-            // Pkg.json "platforms" should be empty and testPlatform should not exist in pkg.json.
             expect(getPkgJson('cordova')).toBeUndefined();
 
             // Add platform without --save.
@@ -366,7 +361,7 @@ describe('pkgJson', function () {
         });
 
         it('Test#009 : should only add the platform to package.json with --save', function () {
-            var platformNotToAdd = 'browser';
+            const platformNotToAdd = 'browser';
             expect(pkgJsonPath).toExist();
 
             // Add a platform without --save.
@@ -434,14 +429,12 @@ describe('pkgJson', function () {
                 [`cordova-${PLATFORM}`]: '^4.5.4'
             });
 
-            { // config.xml has no platforms or plugins yet.
-                const cfg = getCfg();
-                expect(cfg.getEngines()).toEqual([]);
-                expect(cfg.getPluginIdList()).toEqual([]);
-            }
+            // config.xml has no platforms or plugins yet.
+            expect(getCfg().getEngines()).toEqual([]);
+            expect(getCfg().getPluginIdList()).toEqual([]);
+
             expect(installedPlatforms()).toEqual([]);
 
-            // Add ios with --save and --fetch.
             return cordova.platform('add', PLATFORM, {save: true}).then(function () {
                 // No change to pkg.json platforms or spec for ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([ PLATFORM ]);
@@ -454,7 +447,6 @@ describe('pkgJson', function () {
                 const pkgSpec = getPkgJson(`dependencies.cordova-${PLATFORM}`);
                 expect(version).toSatisfy(pkgSpec);
             }).then(function () {
-                // Add splashscreen plugin with --save --fetch.
                 return cordova.plugin('add', PLUGIN, {save: true});
             }).then(function () {
                 // Check that installed version satisfies the dependency spec
@@ -479,7 +471,6 @@ describe('pkgJson', function () {
 
             // Remove for testing purposes so platform is not pre-installed.
             cordova.platform('rm', PLATFORM, {save: true}).then(function () {
-                // Add ios with --save and --fetch.
                 return cordova.platform('add', PLATFORM, {save: true});
             }).then(function () {
                 // pkg.json has new platform.
@@ -490,10 +481,8 @@ describe('pkgJson', function () {
                     spec: specSatisfiedBy(platformVersion(PLATFORM))
                 }]);
             }).then(function () {
-                // Add splashscreen with --save --fetch.
                 return cordova.plugin('add', PLUGIN, {save: true});
             }).then(function () {
-                // Splashscreen plugin and spec added.
                 expect(getCfg().getPlugins()).toEqual([{
                     name: PLUGIN,
                     spec: specSatisfiedBy(pluginVersion(PLUGIN)),
@@ -527,7 +516,6 @@ describe('pkgJson', function () {
 
             expect(installedPlatforms()).toEqual([]);
 
-            // Add ios with --save and --fetch.
             return cordova.platform('add', `${PLATFORM}@4.5.4`, {save: true}).then(function () {
                 // Pkg.json has ios.
                 expect(getPkgJson('cordova.platforms')).toEqual([ PLATFORM ]);
@@ -537,7 +525,6 @@ describe('pkgJson', function () {
                     spec: specSatisfiedBy(platformVersion(PLATFORM))
                 }]);
             }).then(function () {
-                // Add splashscreen with --save --fetch.
                 return cordova.plugin('add', `${PLUGIN}@4.0.0`, {save: true});
             }).then(function () {
                 // Check that installed version satisfies the dependency spec
@@ -557,7 +544,6 @@ describe('pkgJson', function () {
             const PLATFORM = 'browser';
             const platformPath = copyFixture(`platforms/cordova-${PLATFORM}`);
 
-            // Run cordova platform add local path --save --fetch.
             return cordova.platform('add', platformPath, {save: true})
                 .then(function () {
                     expect(getCfg().getEngines()).toContain({
@@ -571,10 +557,8 @@ describe('pkgJson', function () {
             const PLUGIN = 'cordova-lib-test-plugin';
             const pluginPath = copyFixture(path.join('plugins', PLUGIN));
 
-            // Run platform add with local path.
             return cordova.plugin('add', pluginPath, {save: true})
                 .then(function () {
-                    // Check config.xml for plugins and spec.
                     expect(getCfg().getPlugins()).toContain({
                         name: PLUGIN,
                         spec: stringContaining(pluginPath),
