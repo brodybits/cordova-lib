@@ -24,12 +24,15 @@ const { ConfigParser } = require('cordova-common');
 const { listPlatforms, requireNoCache } = require('../src/cordova/util');
 const { tmpDir: getTmpDir, testPlatform, setDefaultTimeout } = require('../spec/helpers');
 
+const TIMEOUT = 240 * 1000;
+
 /** Testing will check if "cordova prepare" is restoring platforms and plugins as expected.
 *   Uses different basePkgJson files depending on testing expecations of what (platforms/plugins/variables)
 *   should initially be in pkg.json and/or config.xml.
 */
+
 describe('restore', function () {
-    setDefaultTimeout(240 * 1000);
+    setDefaultTimeout(TIMEOUT);
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
     var tmpDir, project, pkgJsonPath, configXmlPath;
