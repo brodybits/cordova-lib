@@ -335,8 +335,8 @@ describe('restore', function () {
         *   in platforms.json.
         */
         it('Test#003 : should NOT restore platform that was not saved and removed', function () {
-            const PLATFORM_1 = 'ios';
-            const PLATFORM_2 = 'browser';
+            const PLATFORM_1 = 'browser';
+            const PLATFORM_2 = 'ios';
 
             expect(installedPlatforms()).toEqual([]);
 
@@ -351,8 +351,8 @@ describe('restore', function () {
                 expect(installedPlatforms()).toEqual([PLATFORM_2, PLATFORM_1]);
                 expect(getPkgJson('cordova.platforms')).toEqual([PLATFORM_2]);
             }).then(function () {
-                // Remove all platforms without --save.
-                return cordovaPlatform('rm', [PLATFORM_1, PLATFORM_2]);
+                // Remove [PLATFORM_2] without --save.
+                return cordovaPlatform('rm', [PLATFORM_2]);
             }).then(function () {
                 // Check that the platform that was added with --save is still in package.json.
                 expect(getPkgJson('cordova.platforms')).toEqual([PLATFORM_2]);
