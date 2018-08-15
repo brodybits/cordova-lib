@@ -26,27 +26,28 @@ const { tmpDir: getTmpDir, testPlatform, setDefaultTimeout } = require('../spec/
 const cordova = require('../src/cordova/cordova');
 
 describe('pkgJson', function () {
+    const TIMEOUT = 150 * 1000;
+    setDefaultTimeout(TIMEOUT);
 
     const fixturesPath = path.join(__dirname, '../spec/cordova/fixtures');
     var tmpDir, project, pkgJsonPath, configXmlPath;
 
-    const TIMEOUT = 150 * 1000;
-    setDefaultTimeout(TIMEOUT);
-
-    afterEach(function () {
-        process.chdir(path.join(__dirname, '..')); // Needed to rm the dir on Windows.
-        fs.removeSync(tmpDir);
-    });
-
-    function setup (name) {
+    beforeEach(() => {
         tmpDir = getTmpDir('pkgJson');
         project = path.join(tmpDir, 'project');
         pkgJsonPath = path.join(project, 'package.json');
         configXmlPath = path.join(project, 'config.xml');
+        delete process.env.PWD;
+    });
 
+    afterEach(() => {
+        process.chdir(__dirname); // Needed to rm the dir on Windows.
+        fs.removeSync(tmpDir);
+    });
+
+    function useProject (name) {
         fs.copySync(path.join(fixturesPath, name), project);
         process.chdir(project);
-        delete process.env.PWD;
     }
 
     // Copies a fixture to temp dir to avoid modifiying it as they get installed as symlinks
@@ -57,7 +58,6 @@ describe('pkgJson', function () {
         return tmpPath;
     }
 
-    // Factoring out some repeated checks.
     function installedPlatforms () {
         // Sort platform list to allow for easy pseudo set equality
         return listPlatforms(project).sort();
@@ -121,7 +121,7 @@ describe('pkgJson', function () {
         const pluginId = 'cordova-plugin-device';
 
         beforeEach(function () {
-            setup('basePkgJson');
+            useProject('basePkgJson');
             // Copy some platform to avoid working on a project with no platforms.
             // FIXME Use a fixture that is properly promisified. This one
             // causes spurious test failures when tests reuse the project path.
@@ -308,7 +308,7 @@ describe('pkgJson', function () {
 
     // This group of tests checks if platforms are added and removed as expected from package.json.
     describe('platform end-to-end with --save', function () {
-        beforeEach(() => setup('basePkgJson'));
+        beforeEach(() => useProject('basePkgJson'));
 
         it('Test#006 : platform is added and removed correctly with --save', function () {
             expect(pkgJsonPath).toExist();
@@ -413,7 +413,7 @@ describe('pkgJson', function () {
 
     // Test #020 : use basePkgJson15 as pkg.json contains platform/spec and plugin/spec and config.xml does not.
     describe('During add, if pkg.json has a platform/plugin spec, use that one.', function () {
-        beforeEach(() => setup('basePkgJson15'));
+        beforeEach(() => useProject('basePkgJson15'));
 
         /** Test#020 will check that pkg.json, config.xml, platforms.json, and cordova platform ls
         *   are updated with the correct (platform and plugin) specs from pkg.json.
@@ -457,7 +457,7 @@ describe('pkgJson', function () {
 
     // Test #021 : use basePkgJson16 as config.xml contains platform/spec and plugin/spec pkg.json does not.
     describe('During add, if config.xml has a platform/plugin spec and pkg.json does not, use config.', function () {
-        beforeEach(() => setup('basePkgJson16'));
+        beforeEach(() => useProject('basePkgJson16'));
 
         /** Test#021 during add, this test will check that pkg.json, config.xml, platforms.json,
         *   and cordova platform ls are updated with the correct platform/plugin spec from config.xml.
@@ -494,7 +494,7 @@ describe('pkgJson', function () {
 
     // Test #022 : use basePkgJson17 (config.xml and pkg.json each have ios platform with different specs).
     describe('During add, if add specifies a platform spec, use that one regardless of what is in pkg.json or config.xml', function () {
-        beforeEach(() => setup('basePkgJson17'));
+        beforeEach(() => useProject('basePkgJson17'));
 
         /** Test#022 : when adding with a specific platform version, always use that one
         *   regardless of what is in package.json or config.xml.
@@ -537,7 +537,7 @@ describe('pkgJson', function () {
 
     // No pkg.json included in test file.
     describe('local path is added to config.xml without pkg.json', function () {
-        beforeEach(() => setup('basePkgJson13'));
+        beforeEach(() => useProject('basePkgJson13'));
 
         // Test#026: has NO pkg.json. Checks if local path is added to config.xml and has no errors.
         it('Test#026 : if you add a platform with local path, config.xml gets updated', function () {
