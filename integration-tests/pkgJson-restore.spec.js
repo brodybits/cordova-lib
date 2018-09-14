@@ -264,9 +264,9 @@ describe('restore', function () {
         *   When prepare is run with fetch, platform should be installed.
         */
         it('Test#017 : test to make sure that platform url is added and restored properly', function () {
-            // Node.js 4 still supported by master branch of this platform:
-            const PLATFORM = 'wp8';
-            const PLATFORM_URL = 'https://github.com/apache/cordova-wp8';
+            // Minimum Node.js 6 engine still not strict in master branch of this platform:
+            const PLATFORM = 'osx';
+            const PLATFORM_URL = 'https://github.com/apache/cordova-osx';
 
             return Promise.resolve().then(function () {
                 // Add platform with save and fetch
