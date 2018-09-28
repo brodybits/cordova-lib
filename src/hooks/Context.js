@@ -66,6 +66,11 @@ Context.prototype.requireCordovaModule = function (modulePath) {
         events.emit('warn', 'The module "' + path.basename(relativePath) + '" has been factored ' +
             'into "cordova-common". Consider update your plugin hooks.');
         return compatRequire();
+    } else if (!/cordova-/.test(modulePath)) {
+        events.emit('warn',
+            'Use of requireCordovaModule with non-Cordova module is now deprecated, may be removed in the near future. ' +
+            'Recommended solution: run `npm install ' + modulePath + '` & ' +
+            "use `require('" + modulePath + "')`");
     }
 
     return require(relativePath);
