@@ -30,15 +30,24 @@ describe('hooks/Context', () => {
             events.on('warn', warnSpy);
         });
 
-        beforeEach(() => {
+        afterEach(() => {
             events.removeListener('warn', warnSpy);
         });
 
-        it('emits a warning if non-cordova module is requested', () => {
-            expect(() => requireCordovaModule('non-cordova-module')).toThrowError();
-            expect(warnSpy).toHaveBeenCalledWith(jasmine.stringMatching(
-                'Using requireCordovaModule for non-cordova modules is deprecated'
-            ));
+        it('throws an error (and emits a warning) if non-supported react-native module is requested', () => {
+            expect(() => requireCordovaModule('react-native')).toThrowError();
+            expect(warnSpy).toHaveBeenCalledWith(
+                'Use of requireCordovaModule with non-Cordova module is now deprecated, may be removed in the near future. ' +
+                "Recommended solution: run `npm install react-native` & use `require('react-native')`"
+            );
+        });
+
+        it('emits a warning message if supported non-cordova module is requested', () => {
+            requireCordovaModule('semver');
+            expect(warnSpy).toHaveBeenCalledWith(
+                'Use of requireCordovaModule with non-Cordova module is now deprecated, may be removed in the near future. ' +
+                "Recommended solution: run `npm install semver` & use `require('semver')`"
+            );
         });
     });
 });
