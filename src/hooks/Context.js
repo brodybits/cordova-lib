@@ -72,6 +72,10 @@ Context.prototype.requireCordovaModule = function (modulePath) {
         events.emit('warn', 'The module "' + path.basename(relativePath) + '" has been factored ' +
             'into "cordova-common". Consider update your plugin hooks.');
         return compatRequire();
+    } else if (/xcode/.test(modulePath)) {
+        events.emit('warn',
+            "Use of requireCordovaModule('xcode') is now deprecated, will be removed in the near future." +
+            " Recommended solution: do npm install xcode & use require('xcode')");
     }
 
     return require(relativePath);
