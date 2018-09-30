@@ -22,7 +22,7 @@ const fs = require('fs-extra');
 const rewire = require('rewire');
 const ConfigParser = require('cordova-common').ConfigParser;
 
-const helpers = require('../spec/helpers');
+const helpers = require('../helpers');
 const getTmpDir = helpers.tmpDir;
 const testPlatform = helpers.testPlatform;
 
