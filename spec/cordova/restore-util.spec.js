@@ -19,15 +19,15 @@
 
 const path = require('path');
 const fs = require('fs-extra');
-const prepare = require('../src/cordova/prepare');
+// const prepare = require('../src/cordova/prepare');
 const rewire = require('rewire');
 const ConfigParser = require('cordova-common').ConfigParser;
-const listPlatforms = require('../src/cordova/util').listPlatforms;
+// const listPlatforms = require('../src/cordova/util').listPlatforms;
 
 const helpers = require('../spec/helpers');
 const getTmpDir = helpers.tmpDir;
 const testPlatform = helpers.testPlatform;
-const setDefaultTimeout = helpers.setDefaultTimeout;
+// const setDefaultTimeout = helpers.setDefaultTimeout;
 
 /**
  * Checks if "cordova/restore-util" is restoring platforms and plugins as
