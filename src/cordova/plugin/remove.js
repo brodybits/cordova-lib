@@ -27,7 +27,7 @@ var plugman = require('../../plugman/plugman');
 var metadata = require('../../plugman/util/metadata');
 var Q = require('q');
 var path = require('path');
-var fs = require('fs-extra');
+var fs = require('fs');
 var PluginInfoProvider = require('cordova-common').PluginInfoProvider;
 var detectIndent = require('detect-indent');
 
