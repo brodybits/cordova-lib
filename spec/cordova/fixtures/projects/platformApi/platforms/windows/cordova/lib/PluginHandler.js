@@ -22,8 +22,8 @@
 var fs   = require('fs');
 var path = require('path');
 var shell = require('shelljs');
-var events = require('cordova-common').events;
-var CordovaError = require('cordova-common').CordovaError;
+
+const { CordovaError, events } = require('../../../../../../../../../cordova-lib');
 
 // returns relative file path for a file in the plugin's folder that can be referenced
 // from a project file.

@@ -20,8 +20,9 @@
 var fs = require('fs');
 var path = require('path');
 var shell = require('shelljs');
-var CordovaError = require('cordova-common').CordovaError;
-var events = require('cordova-common').events;
+
+const { CordovaError, events } = require('../../../../../../cordova-lib');
+
 var FileUpdater = require('cordova-common').FileUpdater;
 
 function dirExists (dir) {

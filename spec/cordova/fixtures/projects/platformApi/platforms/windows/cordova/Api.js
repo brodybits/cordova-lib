@@ -18,7 +18,9 @@
 */
 
 var path = require('path');
-var events = require('cordova-common').events;
+
+const { events } = require('../../../../../../../../../cordova-lib');
+
 var JsprojManager = require('./lib/JsprojManager');
 var PluginManager = require('cordova-common').PluginManager;
 var CordovaLogger = require('cordova-common').CordovaLogger;

@@ -18,7 +18,8 @@
 */
 
 var semver = require('semver');
-var CommonPluginInfo = require('cordova-common').PluginInfo;
+
+const CommonPluginInfo = require('../../../../../../../../../cordova-lib').PluginInfo;
 
 var MANIFESTS = {
     'windows': {

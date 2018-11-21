@@ -29,11 +29,14 @@ var path = require('path');
 var util = require('util');
 var semver = require('semver');
 var shell = require('shelljs');
+
 var AppxManifest = require('./AppxManifest');
 var PluginHandler = require('./PluginHandler');
-var events = require('cordova-common').events;
-var CordovaError = require('cordova-common').CordovaError;
+
+const { CordovaError, events } = require('../../../../../../../../../cordova-lib');
+
 var xml_helpers = require('cordova-common').xmlHelpers;
+
 var AppxManifest = require('./AppxManifest');
 
 var WinCSharpProjectTypeGUID = "{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}";  // .csproj

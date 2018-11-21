@@ -20,7 +20,8 @@
 var path = require('path');
 var fs = require('fs');
 var shell = require('shelljs');
-var events = require('cordova-common').events;
+
+const { events } = require('../../../../../../../cordova-lib');
 
 module.exports = {
     www_dir: function (project_dir) {

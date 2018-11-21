@@ -23,7 +23,9 @@ var fs = require('fs');
 var shell = require('shelljs');
 var path = require('path');
 var ROOT = path.join(__dirname, '..', '..');
-var events = require('cordova-common').events;
+
+const { events } = require('../../../../../../cordova-lib');
+
 var check_reqs = require('./check_reqs');
 
 // exported method to create a project, returns a promise that resolves with null
