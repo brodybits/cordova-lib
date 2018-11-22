@@ -30,6 +30,7 @@ exports = module.exports = {
     configparser: common.ConfigParser,
     PluginInfo: common.PluginInfo,
     CordovaError: common.CordovaError,
+    CordovaLogger: common.CordovaLogger,
     plugman: require('./src/plugman/plugman'),
     cordova: require('./src/cordova/cordova'),
     cordova_platforms: require('./src/platforms/platforms')
