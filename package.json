@@ -17,7 +17,7 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
-    "cordova-common": "^3.1.0",
+    "cordova-common": "^3.2.1-nightly.2019.6.13.4ac4d51d",
     "cordova-create": "^2.0.0",
     "cordova-fetch": "^2.0.0",
     "cordova-serve": "^3.0.0",
